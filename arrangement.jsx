@@ -63,6 +63,8 @@ function Arrangement(p) {
     if(p.wheelZoom!==false || e.ctrlKey || e.metaKey){
       e.preventDefault();
       p.setZoom(z=>clamp(z + (e.deltaY<0?12:-12), 28, 220));
+    } else if(p.verticalWheelScroll===false) {
+      e.preventDefault();
     }
   };
 

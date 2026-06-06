@@ -26,6 +26,9 @@ function SettingsModal({ settings, onChange, onClose }) {
   const [draft, setDraft] = React.useState(() => ProjectIO.mergeSettings(settings));
   const [notice, setNotice] = React.useState(null);
   const [menu, setMenu] = React.useState(null);
+  const zoom = Math.max(0.6, Number(document.documentElement.style.zoom || settings?.appearance?.uiScale || 1) || 1);
+  const modalW = Math.max(340, Math.min(880, (window.innerWidth - 32) / zoom));
+  const modalH = Math.max(380, Math.min(640, (window.innerHeight - 32) / zoom));
 
   const set = (section, key, value) => setDraft(s => ({ ...s, [section]:{ ...s[section], [key]:value } }));
   const save = () => {
@@ -77,7 +80,8 @@ function SettingsModal({ settings, onChange, onClose }) {
       <Field label="Default template" hint="Used for new-project defaults as templates mature.">{select(draft.project.template, v=>set("project","template",v), ["Empty","Writing","Mixing","Mastering","Live Recording"])}</Field>
     </Panel>,
     editing: <Panel title="Editing">
-      <Field label="Plain wheel zoom">{toggle("editing","wheelZoom")}</Field>
+      <Field label="Wheel zoom">{toggle("editing","wheelZoom")}</Field>
+      <Field label="Vertical wheel scroll">{toggle("editing","verticalWheelScroll")}</Field>
       <Field label="Snap by default">{toggle("editing","snapDefault")}</Field>
       <Field label="Humanize timing ms">{num("editing","humanizeTimingMs",0,80)}</Field>
       <Field label="Humanize velocity">{num("editing","humanizeVelocity",0,40)}</Field>
@@ -101,7 +105,7 @@ function SettingsModal({ settings, onChange, onClose }) {
   return (
     <div onPointerDown={()=>{ setMenu(null); onClose(); }} style={{position:"fixed",inset:0,zIndex:1200,display:"grid",placeItems:"center",
       background:"rgba(3,4,8,.68)",backdropFilter:"blur(9px)",animation:"popIn .16s ease"}}>
-      <div onPointerDown={e=>e.stopPropagation()} style={{width:"min(880px,94vw)",height:"min(640px,90vh)",display:"flex",
+      <div onPointerDown={e=>e.stopPropagation()} style={{width:modalW,height:modalH,display:"flex",
         background:"var(--bg-2)",border:"1px solid var(--line-3)",borderRadius:"var(--r-4)",boxShadow:"var(--sh-pop)",overflow:"hidden"}}>
         <aside style={{width:210,background:"var(--bg-1)",borderRight:"1px solid var(--line)",padding:10,overflowY:"auto"}}>
           <div style={{fontSize:11,fontWeight:800,letterSpacing:".16em",color:"var(--tx-2)",padding:"8px 8px 12px"}}>SETTINGS</div>

@@ -72,11 +72,12 @@ function TransportButton({icon,on,onClick,color="var(--cyan)",glow,title}) {
   );
 }
 
-function ToolButton({icon,label,onClick,title,disabled}) {
+function ToolButton({icon,label,onClick,title,disabled,active,color="var(--cyan)"}) {
   return (
     <button title={title||label} onPointerDown={e=>e.stopPropagation()} onClick={onClick} disabled={disabled} className="no-sel"
       style={{height:30,minWidth:30,padding:"0 8px",borderRadius:"var(--r-2)",display:"inline-flex",alignItems:"center",gap:6,
-        color:disabled?"var(--tx-4)":"var(--tx-2)",background:"var(--bg-3)",border:"1px solid var(--line)",
+        color:disabled?"var(--tx-4)":active?"#04121a":"var(--tx-2)",background:active?color:"var(--bg-3)",
+        border:`1px solid ${active?color:"var(--line)"}`,
         fontSize:11,fontWeight:700,boxShadow:"var(--sh-1)",position:"relative",zIndex:3,pointerEvents:"auto"}}>
       {React.cloneElement(I[icon]||I.spark,{style:{width:14,height:14}})}
       {label && <span style={{whiteSpace:"nowrap"}}>{label}</span>}
@@ -192,6 +193,8 @@ function Transport(p) {
         <ToolButton icon="duplicate" label="Duplicate" onClick={p.onDuplicateClip} disabled={!p.hasClip}/>
         <ToolButton icon="magnet" label="Quantize" onClick={p.onQuantizeClip} disabled={!p.hasMidiClip}/>
         <ToolButton icon="dice" label="Humanize" onClick={p.onHumanizeClip} disabled={!p.hasMidiClip}/>
+        <ToolButton icon="zoomin" label="Wheel Zoom" active={p.wheelZoom} onClick={p.onToggleWheelZoom} title="Toggle mouse-wheel zoom in the arrangement and piano roll"/>
+        <ToolButton icon="pointer" label="V Scroll" active={p.verticalWheelScroll} color="var(--blue)" onClick={p.onToggleVerticalWheelScroll} title="Toggle vertical mouse-wheel scrolling in the arrangement and piano roll"/>
         <ToolButton icon="wave" label="Import" onClick={p.onImportAudio}/>
         <ToolButton icon="newfile" label="Export" onClick={p.onExportWav}/>
         <ToolButton icon="fx" label="Settings" onClick={p.onSettings}/>

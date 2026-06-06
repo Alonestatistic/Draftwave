@@ -295,6 +295,8 @@ function PianoRoll(p) {
       e.preventDefault();
       if(e.altKey) setNH(h=>clamp(h+(e.deltaY<0?2:-2),9,30));
       else setPpb(z=>clamp(z+(e.deltaY<0?8:-8),16,140));
+    } else if(p.verticalWheelScroll===false) {
+      e.preventDefault();
     }
   };
 
@@ -381,6 +383,10 @@ function PianoRoll(p) {
           <TbBtn icon="zoomout" onClick={()=>setPpb(z=>clamp(z-12,16,140))} title="Zoom out"/>
           <span className="mono faint" style={{fontSize:10,width:34,textAlign:"center"}}>{Math.round(pxPerBeat/46*100)}%</span>
           <TbBtn icon="zoomin" onClick={()=>setPpb(z=>clamp(z+12,16,140))} title="Zoom in"/>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          <TbBtn icon="zoomin" active={p.wheelZoom!==false} onClick={p.onToggleWheelZoom} title="Wheel zoom on/off"/>
+          <TbBtn icon="pointer" active={p.verticalWheelScroll!==false} onClick={p.onToggleVerticalWheelScroll} title="Vertical wheel scroll on/off"/>
         </div>
         <button className="iconbtn" onClick={p.onClose} title="Close piano roll">{I.close}</button>
       </div>

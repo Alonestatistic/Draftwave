@@ -28,6 +28,8 @@ async function run() {
     await fs.writeFile(payload.path, payload.content, "utf8");
     return { canceled:false, path:payload.path };
   });
+  ipcMain.handle("ollama:listPulls", async () => []);
+  ipcMain.handle("ollama:pullModel", async () => ({ ok:false, message:"Ollama downloads are not exercised in alpha integration." }));
 
   const win = new BrowserWindow({
     width: 1280,

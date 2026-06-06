@@ -27,6 +27,7 @@ export const DEFAULT_DAW_SETTINGS = {
   },
   editing: {
     wheelZoom: true,
+    verticalWheelScroll: true,
     snapDefault: true,
     humanizeTimingMs: 12,
     humanizeVelocity: 8,

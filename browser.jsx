@@ -34,14 +34,14 @@ function Browser({ onAdd, onClose, media=[], onImportAudio }) {
 
   const allItems = BROWSER_TREE.flatMap(c=>c.items);
   const mediaItems = media.map(m=>({name:m.name,kind:"audio",tag:`${m.format?.toUpperCase()||"AUDIO"} - ${Math.round((m.duration||0)*10)/10}s`, mediaId:m.id, media:m}));
-  const phase3Tree = [
-    { cat:"Phase 3 Instruments", icon:"piano", items:INSTRUMENT_LIBRARY },
+  const instrumentTree = [
+    { cat:"Instrument Presets", icon:"piano", items:INSTRUMENT_LIBRARY },
   ];
   const browserTree = mediaItems.length ? [
     ...BROWSER_TREE,
-    ...phase3Tree,
+    ...instrumentTree,
     { cat:"Imported Media", icon:"wave", items:mediaItems },
-  ] : [...BROWSER_TREE,...phase3Tree];
+  ] : [...BROWSER_TREE,...instrumentTree];
   const favItems = [...allItems,...mediaItems].filter(it=>favs.has(it.name) && match(it));
 
   return (

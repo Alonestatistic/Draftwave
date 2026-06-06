@@ -201,6 +201,13 @@ function App(){
   const setScaleProject=(value)=>{ recordHistory("Scale"); setScale(value); };
   const setMasterVolProject=(value)=>{ recordHistory("Master volume"); setMasterVol(value); };
   const applySettings=(next)=>{ recordHistory("Settings"); const merged=ProjectIO.saveSettings(next); setSettings(merged); setUiScale(merged.appearance.uiScale || uiScale); };
+  const setEditingSetting=(key,value)=>{
+    setSettings(s=>{
+      const merged=ProjectIO.saveSettings({...s,editing:{...s.editing,[key]:value}});
+      return merged;
+    });
+    setProjectNotice(`${key==="wheelZoom"?"Wheel zoom":"Vertical scroll"} ${value?"enabled":"disabled"}`);
+  };
 
   useEffect(()=>{
     if(!settings.project.autosave || suppressHistoryRef.current) return;
@@ -228,6 +235,23 @@ function App(){
     }}
   };
 
+  const triggerAudioAt=(beat)=>{
+    const spb=60/bpmRef.current;
+    for(const e of eventsRef.current){
+      if(!e.audio || !(e.beat < beat && e.beat + e.dur > beat)) continue;
+      const t=tracksRef.current.find(x=>x.id===e.trackId); if(!t||!audible(t)) continue;
+      const elapsedBeats=beat-e.beat;
+      const playbackRate=e.playbackRate||1;
+      const offset=(e.offset||0)+(elapsedBeats*spb*playbackRate);
+      const remainingBeats=Math.max(0,e.dur-elapsedBeats);
+      if(remainingBeats<=0) continue;
+      const g=t.vol*masterRef.current;
+      levelsRef.current[e.trackId]=Math.min(1,Math.min(1,t.vol*1.2));
+      Audio.sample(AudioCore.getBuffer(e.mediaId),0,offset,remainingBeats*spb,g,t.pan||0,
+        {gain:e.gain,reverse:e.reverse,fadeIn:e.fadeIn,fadeOut:e.fadeOut,playbackRate});
+    }
+  };
+
   useEffect(()=>{ playingRef.current=playing; if(!playing) return;
     let raf, last=performance.now();
     const tick=(now)=>{
@@ -240,6 +264,7 @@ function App(){
         triggerRange(prev, lp.end*beatsPerBar);
         pos=lp.start*beatsPerBar + (pos-lp.end*beatsPerBar);
         posRef.current=lp.start*beatsPerBar; prev=posRef.current;
+        triggerAudioAt(prev);
         triggerRange(prev-0.0001, pos);
       } else { triggerRange(prev,pos); }
       posRef.current=pos;
@@ -257,9 +282,11 @@ function App(){
   },400); return ()=>clearInterval(id); },[]);
 
   // transport
-  const onPlay=()=>{ try{ Audio.ensure(); setPlaying(p=>{ setProjectNotice(p?"Paused":"Playing"); return !p; }); }
+  const startPlayback=()=>{ Audio.ensure(); Audio.stopAll&&Audio.stopAll(); triggerAudioAt(posRef.current); playingRef.current=true; setPlaying(true); setProjectNotice("Playing"); };
+  const pausePlayback=()=>{ playingRef.current=false; setPlaying(false); Audio.stopAll&&Audio.stopAll(); setProjectNotice("Paused"); };
+  const onPlay=()=>{ try{ if(playingRef.current) pausePlayback(); else startPlayback(); }
     catch(e){ setProjectNotice("Audio failed: "+String(e.message||e)); } };
-  const onStop=()=>{ setPlaying(false); if(recorderRef.current) stopMicRecording(); else setRecording(false); setPosition(loop.on?loop.start*beatsPerBar:0); setProjectNotice("Stopped"); };
+  const onStop=()=>{ playingRef.current=false; setPlaying(false); Audio.stopAll&&Audio.stopAll(); if(recorderRef.current) stopMicRecording(); else setRecording(false); setPosition(loop.on?loop.start*beatsPerBar:0); setProjectNotice("Stopped"); };
   const onRec=()=>{ if(recorderRef.current){ stopMicRecording(); setProjectNotice("Recording stopped"); return; }
     try{ Audio.ensure(); startMicRecording(); }
     catch(e){ setProjectNotice("Recording failed: "+String(e.message||e)); } };
@@ -753,8 +780,8 @@ function App(){
     switch(a.action){
       case "set_bpm": setBpmProject(clamp(Math.round(a.value),40,250)); return `Tempo → ${clamp(Math.round(a.value),40,250)} BPM`;
       case "set_key": setScaleProject({root:a.root||"C",name:SCALES[a.scale]?a.scale:"Minor"}); return `Key → ${a.root} ${a.scale}`;
-      case "play": Audio.ensure(); setPlaying(true); return "Playing";
-      case "stop": setPlaying(false); return "Stopped";
+      case "play": startPlayback(); return "Playing";
+      case "stop": playingRef.current=false; setPlaying(false); Audio.stopAll&&Audio.stopAll(); return "Stopped";
       case "set_loop": { const s=clamp(Math.round(a.start_bar??0),0,256), en=clamp(Math.round(a.end_bar??8),s+1,260);
         setLoopRange(s,en); return `Loop ${s+1}–${en} bars`; }
       case "clear_project": cleanSlate(); return "Cleared the project";
@@ -832,7 +859,7 @@ function App(){
     mediaIds:new Set(media.map(m=>m.id)), mediaById:new Map(media.map(m=>[m.id,m])),
     setZoom:setPxPerBar,setPosition,selectTrack,selectClip,moveClip,renameTrack,renameClip,toggleMute,toggleSolo,toggleFav,
     addTrack,dropItem,dropItemAt,openPiano,deleteTrack,duplicateTrack,silenceTrack,clearClips,duplicateClip,deleteClip,resizeClip,setLoopRange,
-    setLoop, recordHistory, wheelZoom:settings.editing.wheelZoom, updateClip, splitClip,
+    setLoop, recordHistory, wheelZoom:settings.editing.wheelZoom, verticalWheelScroll:settings.editing.verticalWheelScroll, updateClip, splitClip,
     onUploadSoundToTrack:(trackId,startBar)=>importAudio(trackId,startBar),
     onDropAudioFilesToTrack:(files,trackId,startBar)=>importAudioFilesToProject(files,{targetTrackId:trackId,startBar}).catch(e=>noteError("Audio import failed", e)),
     onDropAudioFilesAsTracks:(files,startBar)=>importAudioFilesToProject(files,{startBar}).catch(e=>noteError("Audio import failed", e)),
@@ -841,6 +868,7 @@ function App(){
   return (
     <div className="scan" style={{height:"100vh",display:"flex",flexDirection:"column",position:"relative"}}>
       <Transport {...{bpm,setBpm:setBpmProject,playing,recording,position,sig,loop,metro,snap,scale,cpu,uiScale,setUiScale,
+        wheelZoom:settings.editing.wheelZoom,verticalWheelScroll:settings.editing.verticalWheelScroll,
         projectNotice,nativeMode:!!window.dawNative,
         onAppMenu:appMenu,onPlay,onStop,onRec,onLoop:()=>setLoopProject(l=>{ const next={...l,on:!l.on}; setProjectNotice(next.on?"Loop enabled":"Loop disabled"); return next; }),onMetro:()=>{recordHistory("Metronome");setMetro(m=>!m);},
         onSnap:()=>setSnapProject(s=>!s),showBrowser,onBrowser:()=>setShowBrowser(b=>!b),
@@ -849,6 +877,8 @@ function App(){
         onSelectTool:()=>setProjectNotice("Select tool"),
         onSplitClip:splitSelectedClip,onDuplicateClip:duplicateSelectedClip,
         onQuantizeClip:quantizeSelectedClip,onHumanizeClip:humanizeSelectedClip,
+        onToggleWheelZoom:()=>setEditingSetting("wheelZoom",!settings.editing.wheelZoom),
+        onToggleVerticalWheelScroll:()=>setEditingSetting("verticalWheelScroll",!settings.editing.verticalWheelScroll),
         onImportAudio:importAudio,onExportWav:renderMixdown,onSettings:()=>setShowSettings(true)}}/>
 
       <div style={{flex:1,display:"flex",minHeight:0}}>
@@ -870,7 +900,10 @@ function App(){
               {bottom==="piano" && <PianoRoll height={bottomH} clip={selClipObj&&selClipObj.clip} track={selClipObj&&selClipObj.track}
                 scale={scale} setScale={setScaleProject} snap={snap} setSnap={setSnapProject} fold={fold} onFold={()=>{recordHistory("Fold");setFold(f=>!f);}}
                 updateNotes={updateNotes} updateControllers={updateControllers} growClip={growSelClip} playing={playing} playBeatInClip={playBeatInClip} trackGain={trackGain}
-                onClose={()=>setBottom(null)} recordHistory={recordHistory} wheelZoom={settings.editing.wheelZoom} settings={settings}/>}
+                onClose={()=>setBottom(null)} recordHistory={recordHistory} wheelZoom={settings.editing.wheelZoom} verticalWheelScroll={settings.editing.verticalWheelScroll}
+                onToggleWheelZoom={()=>setEditingSetting("wheelZoom",!settings.editing.wheelZoom)}
+                onToggleVerticalWheelScroll={()=>setEditingSetting("verticalWheelScroll",!settings.editing.verticalWheelScroll)}
+                settings={settings}/>}
               {bottom==="mixer" && <Mixer height={bottomH} tracks={tracks} levels={levels} selTrack={selTrack}
                 selectTrack={selectTrack} setVol={setVol} setPan={setPan} toggleMute={toggleMute} toggleSolo={toggleSolo}
                 masterVol={masterVol} setMasterVol={setMasterVolProject} onAddFx={addFx} onToggleFx={toggleFx} onRemoveFx={removeFx}

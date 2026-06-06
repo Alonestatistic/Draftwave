@@ -7,6 +7,7 @@ const isDev = !app.isPackaged;
 const devUrl = "http://127.0.0.1:5173/Draftwave.html";
 const builtHtml = path.join(__dirname, "..", "dist", "Draftwave.html");
 const legacyHtml = path.join(__dirname, "..", "Draftwave.html");
+const ollamaPulls = new Map();
 
 function appMetadata() {
   return {
@@ -21,6 +22,12 @@ function appMetadata() {
     node: process.versions.node,
     userDataPath: app.getPath("userData"),
   };
+}
+
+async function projectDirectory() {
+  const dir = path.join(app.getPath("documents"), "Draftwave Projects");
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
 }
 
 function createWindow() {
@@ -100,9 +107,10 @@ app.on("window-all-closed", () => {
 });
 
 ipcMain.handle("project:saveAs", async (_event, payload) => {
+  const dir = await projectDirectory();
   const result = await dialog.showSaveDialog({
     title: "Save Draftwave Project",
-    defaultPath: payload?.suggestedName || "Untitled.dawproject.json",
+    defaultPath: path.join(dir, payload?.suggestedName || "Untitled.dawproject.json"),
     filters: [
       { name: "Draftwave Project", extensions: ["dawproject.json", "json"] },
       { name: "JSON", extensions: ["json"] },
@@ -120,8 +128,10 @@ ipcMain.handle("project:save", async (_event, payload) => {
 });
 
 ipcMain.handle("project:open", async () => {
+  const dir = await projectDirectory();
   const result = await dialog.showOpenDialog({
     title: "Open Draftwave Project",
+    defaultPath: dir,
     properties: ["openFile"],
     filters: [
       { name: "Draftwave Project", extensions: ["dawproject.json", "json"] },
@@ -202,74 +212,95 @@ ipcMain.handle("plugins:scanNative", async () => new Promise((resolve) => {
   child.send({ type:"scan" });
 }));
 
-ipcMain.handle("ollama:pullModel", async (event, payload) => {
+function sendOllamaPullProgress(model, data) {
+  const state = { model, ...data, updatedAt: new Date().toISOString() };
+  ollamaPulls.set(model, { ...(ollamaPulls.get(model) || {}), state });
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send("ollama:pullProgress", state);
+  }
+}
+
+ipcMain.handle("ollama:listPulls", async () => [...ollamaPulls.values()].map(item => item.state).filter(Boolean));
+
+ipcMain.handle("ollama:pullModel", async (_event, payload) => {
   const model = String(payload?.model || "").trim();
   const baseUrl = String(payload?.url || "http://localhost:11434").replace(/\/$/, "");
   if (!/^[A-Za-z0-9._:-]+$/.test(model)) return { ok:false, message:"Invalid Ollama model name." };
-  const send = (data) => event.sender.send("ollama:pullProgress", { model, ...data });
+  const current = ollamaPulls.get(model);
+  if (current?.active && current.promise) return current.promise;
+  const send = (data) => sendOllamaPullProgress(model, data);
 
-  try {
-    send({ status:"Connecting to Ollama", percent:0 });
-    const response = await fetch(`${baseUrl}/api/pull`, {
-      method:"POST",
-      headers:{ "content-type":"application/json" },
-      body: JSON.stringify({ model, stream:true }),
-    });
-    if (!response.ok || !response.body) throw new Error(`Ollama API ${response.status}`);
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    for (;;) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream:true });
-      const lines = buffer.split(/\r?\n/);
-      buffer = lines.pop() || "";
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        const msg = JSON.parse(line);
-        const total = Number(msg.total || 0);
-        const completed = Number(msg.completed || 0);
-        const percent = total ? Math.max(0, Math.min(100, Math.round((completed / total) * 100))) : undefined;
-        send({ status:msg.status || "Downloading", digest:msg.digest, total, completed, percent });
+  const promise = (async () => {
+    try {
+      send({ status:"Connecting to Ollama", percent:0, done:false });
+      const response = await fetch(`${baseUrl}/api/pull`, {
+        method:"POST",
+        headers:{ "content-type":"application/json" },
+        body: JSON.stringify({ model, stream:true }),
+      });
+      if (!response.ok || !response.body) throw new Error(`Ollama API ${response.status}`);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream:true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          const msg = JSON.parse(line);
+          const total = Number(msg.total || 0);
+          const completed = Number(msg.completed || 0);
+          const percent = total ? Math.max(0, Math.min(100, Math.round((completed / total) * 100))) : undefined;
+          send({ status:msg.status || "Downloading", digest:msg.digest, total, completed, percent, done:false });
+        }
       }
+      send({ status:"Ready", percent:100, done:true });
+      return { ok:true, model };
+    } catch (apiError) {
+      send({ status:"Ollama API unavailable; trying ollama CLI", message:String(apiError.message || apiError), done:false });
     }
-    send({ status:"Ready", percent:100, done:true });
-    return { ok:true, model };
-  } catch (apiError) {
-    send({ status:"Ollama API unavailable; trying ollama CLI", message:String(apiError.message || apiError) });
-  }
 
-  return await new Promise((resolve) => {
-    const child = spawn("ollama", ["pull", model], { windowsHide:true });
-    let output = "";
-    child.stdout.on("data", (chunk) => {
-      const text = chunk.toString();
-      output += text;
-      const last = text.split(/\r|\n/).filter(Boolean).pop();
-      if (last) send({ status:last.slice(0, 160) });
+    return await new Promise((resolve) => {
+      const child = spawn("ollama", ["pull", model], { windowsHide:true });
+      let output = "";
+      child.stdout.on("data", (chunk) => {
+        const text = chunk.toString();
+        output += text;
+        const last = text.split(/\r|\n/).filter(Boolean).pop();
+        if (last) send({ status:last.slice(0, 160), done:false });
+      });
+      child.stderr.on("data", (chunk) => {
+        const text = chunk.toString();
+        output += text;
+        const last = text.split(/\r|\n/).filter(Boolean).pop();
+        if (last) send({ status:last.slice(0, 160), done:false });
+      });
+      child.on("error", (error) => {
+        send({ status:"Ollama CLI not found", error:String(error.message || error), done:true });
+        resolve({ ok:false, message:"Ollama is not installed or not on PATH. Install Ollama, then try again." });
+      });
+      child.on("exit", (code) => {
+        if (code === 0) {
+          send({ status:"Ready", percent:100, done:true });
+          resolve({ ok:true, model });
+        } else {
+          const message = output.trim().split(/\r?\n/).slice(-3).join(" ") || `ollama pull exited with ${code}`;
+          send({ status:"Download failed", error:message, done:true });
+          resolve({ ok:false, message });
+        }
+      });
     });
-    child.stderr.on("data", (chunk) => {
-      const text = chunk.toString();
-      output += text;
-      const last = text.split(/\r|\n/).filter(Boolean).pop();
-      if (last) send({ status:last.slice(0, 160) });
-    });
-    child.on("error", (error) => {
-      send({ status:"Ollama CLI not found", error:String(error.message || error), done:true });
-      resolve({ ok:false, message:"Ollama is not installed or not on PATH. Install Ollama, then try again." });
-    });
-    child.on("exit", (code) => {
-      if (code === 0) {
-        send({ status:"Ready", percent:100, done:true });
-        resolve({ ok:true, model });
-      } else {
-        const message = output.trim().split(/\r?\n/).slice(-3).join(" ") || `ollama pull exited with ${code}`;
-        send({ status:"Download failed", error:message, done:true });
-        resolve({ ok:false, message });
-      }
-    });
+  })();
+
+  ollamaPulls.set(model, { active:true, promise, state:{ model, status:"Starting download", percent:0, done:false, updatedAt:new Date().toISOString() } });
+  promise.finally(() => {
+    const item = ollamaPulls.get(model);
+    if (item) ollamaPulls.set(model, { ...item, active:false, promise:null });
   });
+  return promise;
 });
 
 ipcMain.handle("export:saveBinary", async (_event, payload) => {

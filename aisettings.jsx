@@ -48,6 +48,10 @@ function AISettingsModal({ onClose, onSaved, embedded=false }) {
   };
 
   React.useEffect(() => {
+    window.dawNative?.listOllamaPulls?.().then(list => {
+      const active = [...(list || [])].reverse().find(item => item && !item.done) || [...(list || [])].reverse()[0];
+      if (active) setPull(active);
+    }).catch(() => {});
     if (!window.dawNative?.onOllamaPullProgress) return;
     return window.dawNative.onOllamaPullProgress((msg) => {
       setPull(p => p && msg.model === p.model ? { ...p, ...msg } : p);

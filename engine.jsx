@@ -110,6 +110,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
    poly: osc + filter + ADSR → per-instrument voice → master bus (+reverb send) */
 const Audio = (() => {
   let ctx = null, master = null, comp = null, verb = null, verbGain = null, ready = false;
+  const activeSources = new Set();
 
   function ensure() {
     if (ctx) { if (ctx.state === "suspended") ctx.resume(); return ctx; }
@@ -207,7 +208,16 @@ const Audio = (() => {
     out.gain.linearRampToValueAtTime(0.0001, t + totalDur);
     if (pan){ pan.pan.value = panV; src.connect(out); out.connect(pan); pan.connect(master); }
     else { src.connect(out); out.connect(master); }
+    activeSources.add(src);
+    src.onended = () => activeSources.delete(src);
     src.start(t, startOffset, totalDur);
+  }
+
+  function stopAll() {
+    for (const src of [...activeSources]) {
+      try { src.stop(); } catch (_) {}
+      activeSources.delete(src);
+    }
   }
 
   function reverseBuffer(buffer) {
@@ -219,7 +229,7 @@ const Audio = (() => {
     return out;
   }
 
-  return { ensure, note, drum, click, sample, get ctx(){ return ctx; }, get ready(){ return ready; } };
+  return { ensure, note, drum, click, sample, stopAll, get ctx(){ return ctx; }, get ready(){ return ready; } };
 })();
 
 /* ---------- seed project ---------- */

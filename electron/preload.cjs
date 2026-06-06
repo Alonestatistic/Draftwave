@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("dawNative", {
   openPanel: (payload) => ipcRenderer.invoke("window:openPanel", payload),
   listExtensions: () => ipcRenderer.invoke("extensions:list"),
   scanNativePlugins: () => ipcRenderer.invoke("plugins:scanNative"),
+  listOllamaPulls: () => ipcRenderer.invoke("ollama:listPulls"),
   pullOllamaModel: (payload) => ipcRenderer.invoke("ollama:pullModel", payload),
   onOllamaPullProgress: (callback) => {
     const handler = (_event, payload) => callback(payload);
