@@ -26,7 +26,7 @@ async function mustContain(path, patterns) {
 const pkg = JSON.parse(await readFile(file("package.json"), "utf8"));
 
 if (pkg.main !== "electron/main.cjs") failures.push("package.json main must point at electron/main.cjs");
-for (const script of ["build", "start", "smoke", "check"]) {
+for (const script of ["build", "start", "smoke", "test", "check"]) {
   if (!pkg.scripts?.[script]) failures.push(`package.json is missing npm script ${script}`);
 }
 
@@ -35,7 +35,9 @@ await Promise.all([
   mustExist("electron/main.cjs"),
   mustExist("electron/preload.cjs"),
   mustContain("src/main.jsx", [/import\("\.\.\/project\.jsx"\)/, /boot\(\)\.catch/]),
-  mustContain("project.jsx", [/export const ProjectIO/, /export function migrateProject/, /clearAutosave/, /autosaveInfo/]),
+  mustContain("src/projectModel.js", [/export function migrateProject/, /export function serializeProjectState/, /export function hydrateProjectData/]),
+  mustContain("project.jsx", [/export const ProjectIO/, /migrateProject/, /clearAutosave/, /autosaveInfo/]),
+  mustContain("tests/projectModel.test.mjs", [/serializeProjectState/, /migrateProject/, /embedded media data urls/]),
   mustContain("audiocore.jsx", [/export const AudioCore/, /export const MidiCore/]),
   mustContain("capabilities.jsx", [/export const CapabilityRegistry/, /Available/, /Experimental/, /Needs backend/]),
   mustContain("app.jsx", [/Autosave recovery available/, /Report Issue/, /AppErrorBoundary/]),
