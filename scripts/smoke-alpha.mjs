@@ -26,7 +26,7 @@ async function mustContain(path, patterns) {
 const pkg = JSON.parse(await readFile(file("package.json"), "utf8"));
 
 if (pkg.main !== "electron/main.cjs") failures.push("package.json main must point at electron/main.cjs");
-for (const script of ["build", "start", "smoke", "test", "check"]) {
+for (const script of ["build", "start", "smoke", "test", "integration", "check"]) {
   if (!pkg.scripts?.[script]) failures.push(`package.json is missing npm script ${script}`);
 }
 
@@ -42,6 +42,8 @@ await Promise.all([
   mustContain("capabilities.jsx", [/export const CapabilityRegistry/, /Available/, /Experimental/, /Needs backend/]),
   mustContain("app.jsx", [/Autosave recovery available/, /Report Issue/, /AppErrorBoundary/]),
   mustContain("electron/main.cjs", [/diagnostics:saveIssueReport/, /export:saveBinary/, /project:open/]),
+  mustContain("electron/alpha-integration-main.cjs", [/ProjectIO/, /Export Mixdown WAV/, /RenderCore\.renderWav/]),
+  mustContain("scripts/integration-alpha.cjs", [/require\("electron"\)/, /alpha-integration-main\.cjs/]),
   mustContain("docs/KNOWN_LIMITATIONS.md", [/VST hosting/, /SoundFont/, /Private Alpha/]),
   mustContain("docs/RELEASE_CHECKLIST.md", [/npm run check/, /Data-[Ll]oss/, /Windows/]),
 ]);
