@@ -1,6 +1,7 @@
 export const PROJECT_VERSION = 2;
 export const PROJECT_AUTOSAVE_KEY = "thedaw.autosave.v1";
 export const PROJECT_SETTINGS_KEY = "thedaw.settings.v1";
+export const MEDIA_EMBED_WARN_BYTES = 25 * 1024 * 1024;
 
 export const cloneData = (value) => JSON.parse(JSON.stringify(value));
 
@@ -69,13 +70,65 @@ const safeArray = (value) => Array.isArray(value) ? value : [];
 const fallbackUid = () => Math.random().toString(36).slice(2, 9);
 const clampNumber = (value, min, max) => Math.max(min, Math.min(max, value));
 
-const normalizeMediaAsset = (item, makeId) => ({
-  ...item,
-  id: item.id || makeId(),
-  kind: item.kind || "audio",
-  name: item.name || "Untitled audio",
-  format: item.format || (item.name?.split(".").pop() || "unknown").toLowerCase(),
-});
+const normalizeMediaAsset = (item, makeId) => {
+  const asset = item && typeof item === "object" ? item : {};
+  return {
+    ...asset,
+    id: asset.id || makeId(),
+    kind: asset.kind || "audio",
+    name: asset.name || "Untitled audio",
+    format: asset.format || (asset.name?.split(".").pop() || "unknown").toLowerCase(),
+  };
+};
+
+function estimateDataUrlBytes(dataUrl) {
+  if (typeof dataUrl !== "string") return 0;
+  const payload = dataUrl.includes(",") ? dataUrl.split(",").pop() : dataUrl;
+  const padding = payload.endsWith("==") ? 2 : payload.endsWith("=") ? 1 : 0;
+  return Math.max(0, Math.floor(payload.length * 3 / 4) - padding);
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${Math.round(bytes / (1024 * 1024) * 10) / 10} MB`;
+}
+
+export function validateProjectMedia(project, options = {}) {
+  const warnAt = options.embedWarnBytes || MEDIA_EMBED_WARN_BYTES;
+  const warnings = [];
+  const media = safeArray(project?.media);
+  const mediaIds = new Set(media.map(item => item?.id).filter(Boolean));
+
+  for (const track of safeArray(project?.tracks)) {
+    for (const clip of safeArray(track?.clips)) {
+      if (!clip?.audio) continue;
+      const clipName = clip.name || "Untitled";
+      const trackName = track?.name ? ` on "${track.name}"` : "";
+      if (!clip.mediaId) warnings.push(`Audio clip "${clipName}"${trackName} has no media asset ID.`);
+      else if (!mediaIds.has(clip.mediaId)) warnings.push(`Audio clip "${clipName}"${trackName} references missing media ${clip.mediaId}.`);
+    }
+  }
+
+  for (const item of media) {
+    if (!item?.id) warnings.push(`Media asset "${item?.name || "Untitled audio"}" has no asset ID.`);
+    if (item?.kind && item.kind !== "audio") continue;
+    const name = item?.name || item?.id || "Untitled audio";
+    if (!item?.dataUrl) {
+      warnings.push(`Media asset "${name}" has no embedded audio data and may not survive save/load.`);
+      continue;
+    }
+    const embeddedBytes = estimateDataUrlBytes(item.dataUrl);
+    if (embeddedBytes > warnAt) warnings.push(`Media asset "${name}" embeds ${formatBytes(embeddedBytes)} of audio data; large alpha projects may save slowly.`);
+  }
+
+  return warnings;
+}
+
+export function mediaWarningSummary(warnings) {
+  const count = safeArray(warnings).length;
+  if (!count) return "";
+  return `${count} media warning${count===1?"":"s"}: ${warnings[0]}`;
+}
 
 export function mergeSettings(settings) {
   const merge = (base, patch) => {
@@ -119,7 +172,6 @@ export function migrateProject(project, options = {}) {
   if (!project || typeof project !== "object") throw new Error("Invalid project file.");
   const makeId = options.uid || fallbackUid;
   const migrated = cloneData(project);
-  const warnings = [];
   let version = Number(migrated.version || 0);
 
   if (version < 1) {
@@ -139,25 +191,25 @@ export function migrateProject(project, options = {}) {
   }
 
   if (version < 2) {
-    migrated.media = safeArray(migrated.media).map(item => normalizeMediaAsset(item, makeId));
-    const mediaIds = new Set(migrated.media.map(item => item.id));
     migrated.tracks = safeArray(migrated.tracks).map(track => ({
       ...track,
-      clips: safeArray(track.clips).map(clip => {
-        if (clip.audio && clip.mediaId && !mediaIds.has(clip.mediaId)) {
-          warnings.push(`Audio clip "${clip.name || "Untitled"}" references missing media ${clip.mediaId}.`);
-        }
-        return {
-          ...clip,
-          id: clip.id || makeId(),
-          name: clip.name || "Clip",
-          start: Number.isFinite(+clip.start) ? +clip.start : 0,
-          len: Math.max(1, Number.isFinite(+clip.len) ? +clip.len : 1),
-        };
-      }),
+      clips: safeArray(track.clips).map(clip => ({
+        ...clip,
+        id: clip.id || makeId(),
+        name: clip.name || "Clip",
+        start: Number.isFinite(+clip.start) ? +clip.start : 0,
+        len: Math.max(1, Number.isFinite(+clip.len) ? +clip.len : 1),
+      })),
     }));
     version = 2;
   }
+
+  migrated.media = safeArray(migrated.media).map(item => normalizeMediaAsset(item, makeId));
+  migrated.tracks = safeArray(migrated.tracks).map(track => ({
+    ...track,
+    clips: safeArray(track.clips),
+  }));
+  const warnings = validateProjectMedia(migrated, options);
 
   migrated.version = PROJECT_VERSION;
   migrated.migration = {

@@ -213,6 +213,7 @@ function Arrangement(p) {
                 style={{position:"relative",height:HH,borderBottom:"1px solid var(--line)",
                   background: p.selTrack===t.id?"color-mix(in srgb,#fff 2.5%,transparent)":"transparent"}}>
                 {(t.clips||[]).map(clip=>{ const sel = selClip&&selClip.trackId===t.id&&selClip.clipId===clip.id; const cc=t.color;
+                  const missingMedia = !!clip.audio && (!clip.mediaId || !p.mediaIds?.has(clip.mediaId));
                   return (
                     <div key={clip.id} onPointerDown={(e)=>dragClip(e,ti,clip)}
                       onContextMenu={(e)=>clipMenu(e,t,clip)}
@@ -221,12 +222,14 @@ function Arrangement(p) {
                       style={{position:"absolute",top:5,height:HH-12,left:clip.start*pxPerBar,width:clip.len*pxPerBar-2,
                         borderRadius:7,overflow:"hidden",cursor:"grab",
                         background:`color-mix(in srgb,${cc} 20%,var(--bg-3))`,
-                        border:`1.5px solid ${sel?cc:`color-mix(in srgb,${cc} 45%,transparent)`}`,
+                        border:`1.5px solid ${missingMedia?"var(--amber)":sel?cc:`color-mix(in srgb,${cc} 45%,transparent)`}`,
                         boxShadow: sel?`0 0 0 1px ${cc},0 6px 18px rgba(0,0,0,.4)`:"0 2px 6px rgba(0,0,0,.3)"}}>
                       <div style={{height:15,display:"flex",alignItems:"center",padding:"0 7px",
                         background:`color-mix(in srgb,${cc} 34%,transparent)`,gap:5}}>
                         <span style={{fontSize:9.5,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",
                           textOverflow:"ellipsis",textShadow:"0 1px 2px rgba(0,0,0,.5)"}}>{clip.name}</span>
+                        {missingMedia && <span className="mono" title="This audio clip has no available media asset"
+                          style={{marginLeft:"auto",fontSize:8,color:"var(--amber)",fontWeight:800,whiteSpace:"nowrap"}}>MISSING</span>}
                       </div>
                       <div style={{position:"absolute",top:15,left:0,right:0,bottom:0}}>{clipInner(clip,t.kind,cc,HH-27)}</div>
                       <div style={{position:"absolute",right:0,top:0,bottom:0,width:8,cursor:"ew-resize"}}/>

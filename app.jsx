@@ -85,6 +85,7 @@ function App(){
   const [projectNotice,setProjectNotice]=useState("Ready");
   const [historyVersion,setHistoryVersion]=useState(0);
   const [media,setMedia]=useState([]);
+  const [mediaWarnings,setMediaWarnings]=useState([]);
   const [midiInputs,setMidiInputs]=useState([]);
   const [midiEnabled,setMidiEnabled]=useState(false);
   const [autosavePrompt,setAutosavePrompt]=useState(()=>ProjectIO.autosaveInfo());
@@ -149,10 +150,12 @@ function App(){
     setTracks(next.tracks); setBpm(next.bpm); setLoop(next.loop); setMetro(next.metro); setSnap(next.snap);
     setScale(next.scale); setFold(next.fold); setMasterVol(next.masterVol); setSettings(next.settings);
     setMedia(next.media || []); AudioCore.hydrateMedia(next.media || []).catch(()=>{});
+    const warnings = next._warnings || [];
+    setMediaWarnings(warnings);
     setPosition(next.position || 0);
     setTimeout(()=>{ suppressHistoryRef.current=false; },0);
     if(opts.path!==undefined) setProjectPath(opts.path);
-    const warning = next._warnings?.length ? ` (${next._warnings.length} media warning${next._warnings.length===1?"":"s"})` : "";
+    const warning = warnings.length ? ` (${warnings.length} media warning${warnings.length===1?"":"s"})` : "";
     if(opts.notice) setProjectNotice(opts.notice + warning);
   };
 
@@ -338,15 +341,20 @@ function App(){
 
   // project ops
   const cleanSlate=()=>{ recordHistory("New project"); setPlaying(false); setTracks([]); setSelClip(null); setSelTrack(null);
-    setPosition(0); setLoop({on:true,start:0,end:8}); };
+    setMedia([]); setMediaWarnings([]); setProjectPath(null); setPosition(0); setLoop({on:true,start:0,end:8}); };
   const loadDemo=()=>{ recordHistory("Load demo"); setPlaying(false); const t=SEED().map(normalizeTrack); setTracks(t);
-    setSelClip({trackId:t[2].id,clipId:t[2].clips[0].id}); setSelTrack(t[2].id); setPosition(0); };
+    setMedia([]); setMediaWarnings([]); setSelClip({trackId:t[2].id,clipId:t[2].clips[0].id}); setSelTrack(t[2].id); setPosition(0); };
 
   const saveProject=async(saveAs=false)=>{
     const project=ProjectIO.serialize({tracks,bpm,sig,position,loop,metro,snap,scale,fold,masterVol,settings,media});
+    const warnings = ProjectIO.validateMedia(project);
+    setMediaWarnings(warnings);
     try{
       const res=saveAs?await ProjectIO.saveAs(project):await ProjectIO.save(project,projectPath);
-      if(!res?.canceled){ setProjectPath(res.path||projectPath); setProjectNotice(res.path?"Saved "+res.path:"Project exported"); }
+      if(!res?.canceled){
+        setProjectPath(res.path||projectPath);
+        setProjectNotice(warnings.length ? `Saved with ${warnings.length} media warning${warnings.length===1?"":"s"}` : (res.path?"Saved "+res.path:"Project exported"));
+      }
     } catch(e){ noteError("Save failed", e); }
   };
   const openProject=async()=>{
@@ -407,6 +415,7 @@ function App(){
         notice:projectNotice,
         projectPath,
         projectSummary:projectSummary(currentProject()),
+        mediaWarnings,
         capabilities:CapabilityRegistry.all().map(({id,title,status})=>({id,title,status})),
         recentErrors:recentErrorsRef.current,
       };
@@ -423,7 +432,7 @@ function App(){
     recordHistory("Load template");
     const made=tpl.make();
     setPlaying(false); setTracks((made.tracks||[]).map(normalizeTrack)); setLoop(made.loop||{on:true,start:0,end:8});
-    setBpm(made.bpm||124); setScale(made.scale||{root:"C",name:"Minor"}); setSelClip(null); setSelTrack(null); setPosition(0);
+    setBpm(made.bpm||124); setScale(made.scale||{root:"C",name:"Minor"}); setMedia([]); setMediaWarnings([]); setSelClip(null); setSelTrack(null); setPosition(0);
     setProjectNotice("Loaded template: "+tpl.name);
   };
   const openPanel=(panel)=>window.dawNative?.openPanel
@@ -459,7 +468,7 @@ function App(){
     const input=document.createElement("input");
     input.type="file";
     input.multiple=true;
-    input.accept=".wav,.mp3,.ogg,.flac,audio/wav,audio/mpeg,audio/ogg,audio/flac";
+    input.accept=".wav,.mp3,.ogg,.flac,.webm,audio/wav,audio/mpeg,audio/ogg,audio/flac,audio/webm";
     input.onchange=async()=>{
       const files=Array.from(input.files||[]);
       if(!files.length) return;
@@ -468,6 +477,7 @@ function App(){
         const imported=await AudioCore.importAudioFiles(files);
         recordHistory("Import audio");
         setMedia(m=>[...m,...imported]);
+        setMediaWarnings([]);
         imported.forEach(item=>addAudioMediaAsTrack(item,Math.floor(posRef.current/beatsPerBar)));
         setProjectNotice(`Imported ${imported.length} audio file${imported.length===1?"":"s"}`);
       } catch(e){ noteError("Audio import failed", e); }
@@ -638,6 +648,7 @@ function App(){
   const trackGain = selClipObj ? selClipObj.track.vol*masterVol : 0.8;
 
   const arrCtx = { tracks,pxPerBar,beatsPerBar,timelineBars:songBars,position,selClip,selTrack,playing,loop,snap,
+    mediaIds:new Set(media.map(m=>m.id)),
     setZoom:setPxPerBar,setPosition,selectTrack,selectClip,moveClip,renameTrack,renameClip,toggleMute,toggleSolo,toggleFav,
     addTrack,dropItem,dropItemAt,openPiano,deleteTrack,duplicateTrack,silenceTrack,clearClips,duplicateClip,deleteClip,resizeClip,setLoopRange,
     setLoop, recordHistory, wheelZoom:settings.editing.wheelZoom, updateClip, splitClip };
@@ -683,6 +694,22 @@ function App(){
       </div>
 
       <ContextMenuHost/>
+      {mediaWarnings.length > 0 && (
+        <div style={{position:"absolute",left:16,right:16,top:autosavePrompt?132:74,zIndex:48,display:"flex",justifyContent:"center",pointerEvents:"none"}}>
+          <div title={mediaWarnings.join("\n")} style={{pointerEvents:"auto",maxWidth:860,width:"100%",display:"flex",alignItems:"center",gap:12,padding:"10px 13px",
+            border:"1px solid color-mix(in srgb,var(--amber) 45%,transparent)",background:"color-mix(in srgb,var(--bg-2) 94%,var(--amber))",
+            borderRadius:"var(--r-2)",boxShadow:"var(--sh-pop)"}}>
+            <div style={{width:9,height:9,borderRadius:99,background:"var(--amber)",boxShadow:"0 0 12px var(--amber)"}}/>
+            <div style={{minWidth:0,flex:1}}>
+              <div style={{fontWeight:800,fontSize:12.5}}>Project media warning</div>
+              <div className="mono dim" style={{fontSize:10,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                {ProjectIO.mediaWarningSummary(mediaWarnings)}
+              </div>
+            </div>
+            <button onClick={()=>setMediaWarnings([])} style={{height:28,padding:"0 10px",borderRadius:"var(--r-2)",background:"var(--bg-4)",color:"var(--tx-2)",fontWeight:700}}>Dismiss</button>
+          </div>
+        </div>
+      )}
       {autosavePrompt && (
         <div style={{position:"absolute",left:16,right:16,top:74,zIndex:50,display:"flex",justifyContent:"center",pointerEvents:"none"}}>
           <div style={{pointerEvents:"auto",maxWidth:760,width:"100%",display:"flex",alignItems:"center",gap:12,padding:"12px 14px",

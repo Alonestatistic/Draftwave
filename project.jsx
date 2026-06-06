@@ -9,10 +9,12 @@ import {
   DEFAULT_DAW_SETTINGS,
   cloneData,
   hydrateProjectData,
+  mediaWarningSummary,
   mergeSettings,
   migrateProject,
   projectSummary,
   serializeProjectState,
+  validateProjectMedia,
 } from "./src/projectModel.js";
 
 export {
@@ -21,9 +23,11 @@ export {
   PROJECT_VERSION,
   DEFAULT_DAW_SETTINGS,
   cloneData,
+  mediaWarningSummary,
   mergeSettings,
   migrateProject,
   projectSummary,
+  validateProjectMedia,
 };
 
 export const ProjectIO = {
@@ -41,6 +45,12 @@ export const ProjectIO = {
   },
   mergeSettings(settings) {
     return mergeSettings(settings);
+  },
+  validateMedia(project) {
+    return validateProjectMedia(project);
+  },
+  mediaWarningSummary(warnings) {
+    return mediaWarningSummary(warnings);
   },
   loadSettings() {
     try { return ProjectIO.mergeSettings(JSON.parse(localStorage.getItem(PROJECT_SETTINGS_KEY) || "{}")); }

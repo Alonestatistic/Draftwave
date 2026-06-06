@@ -5,9 +5,11 @@ import {
   DEFAULT_DAW_SETTINGS,
   PROJECT_VERSION,
   hydrateProjectData,
+  mediaWarningSummary,
   mergeSettings,
   migrateProject,
   serializeProjectState,
+  validateProjectMedia,
 } from "../src/projectModel.js";
 
 const makeId = (() => {
@@ -114,4 +116,50 @@ test("migrateProject preserves embedded media data urls for alpha save/load reli
   assert.equal(migrated.media[0].dataUrl, "data:audio/webm;base64,AAAA");
   assert.equal(migrated.media[0].format, "webm");
   assert.equal(migrated.migration.warnings.length, 0);
+});
+
+test("validateProjectMedia reports missing asset IDs and missing embedded audio", () => {
+  const warnings = validateProjectMedia({
+    version: PROJECT_VERSION,
+    tracks: [
+      { id:"track_1", name:"Vox", clips:[
+        { id:"clip_1", name:"No Asset", audio:true },
+        { id:"clip_2", name:"Lost Ref", audio:true, mediaId:"gone" },
+      ] },
+    ],
+    media: [{ id:"media_1", kind:"audio", name:"dry.wav" }],
+  });
+
+  assert.equal(warnings.length, 3);
+  assert.match(warnings[0], /No Asset.*no media asset ID/);
+  assert.match(warnings[1], /Lost Ref.*missing media gone/);
+  assert.match(warnings[2], /dry\.wav.*no embedded audio data/);
+  assert.match(mediaWarningSummary(warnings), /^3 media warnings:/);
+});
+
+test("migrateProject validates current-version projects, not only old migrations", () => {
+  const migrated = migrateProject({
+    version: PROJECT_VERSION,
+    transport: { bpm: 120 },
+    music: {},
+    mixer: {},
+    tracks: [{ id:"track_1", name:"Audio", kind:"audio", clips:[{ id:"clip_1", name:"Broken", audio:true, mediaId:"missing" }] }],
+    media: [null],
+  });
+
+  assert.equal(migrated.version, PROJECT_VERSION);
+  assert.equal(migrated.media[0].name, "Untitled audio");
+  assert.match(migrated.migration.warnings[0], /Broken.*missing media missing/);
+});
+
+test("validateProjectMedia warns when embedded media is large", () => {
+  const warnings = validateProjectMedia({
+    version: PROJECT_VERSION,
+    tracks: [],
+    media: [{ id:"media_1", kind:"audio", name:"long_take.wav", dataUrl:`data:audio/wav;base64,${"A".repeat(120)}` }],
+  }, { embedWarnBytes: 32 });
+
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /long_take\.wav" embeds/);
+  assert.match(warnings[0], /save slowly/);
 });
