@@ -42,7 +42,7 @@ await Promise.all([
   mustContain("capabilities.jsx", [/export const CapabilityRegistry/, /Available/, /Experimental/, /Needs backend/]),
   mustContain("app.jsx", [/Autosave recovery available/, /Report Issue/, /AppErrorBoundary/]),
   mustContain("electron/main.cjs", [/diagnostics:saveIssueReport/, /export:saveBinary/, /project:open/]),
-  mustContain("electron/alpha-integration-main.cjs", [/ProjectIO/, /Export Mixdown WAV/, /RenderCore\.renderWav/]),
+  mustContain("electron/alpha-integration-main.cjs", [/ProjectIO/, /Export Mixdown WAV/, /Autosave recovery available/, /RenderCore\.renderWav/]),
   mustContain("scripts/integration-alpha.cjs", [/require\("electron"\)/, /alpha-integration-main\.cjs/]),
   mustContain("docs/KNOWN_LIMITATIONS.md", [/VST hosting/, /SoundFont/, /Private Alpha/]),
   mustContain("docs/RELEASE_CHECKLIST.md", [/npm run check/, /Data-[Ll]oss/, /Windows/]),

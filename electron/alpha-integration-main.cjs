@@ -108,6 +108,59 @@ async function run() {
   if (saved.version !== 2) failures.push(`saved project version was ${saved.version}`);
   if (saved.media?.[0]?.dataUrl !== "data:audio/wav;base64,AAAA") failures.push("saved project did not preserve embedded media data");
 
+  const autosaveRestore = await win.webContents.executeJavaScript(`(async () => {
+    const brokenAutosave = window.ProjectIO.serialize({
+      tracks: [{
+        id:"track_autosave",
+        kind:"audio",
+        type:"audio",
+        name:"Recovered Audio",
+        color:"var(--t7)",
+        mute:false,
+        solo:false,
+        vol:0.8,
+        pan:0,
+        clips:[{ id:"clip_missing", audio:true, mediaId:"missing_media", start:0, len:2, name:"Missing Take" }]
+      }],
+      bpm: 118,
+      sig: [4,4],
+      position: 0,
+      loop: { on:true, start:0, end:4 },
+      metro: false,
+      snap: true,
+      scale: { root:"C", name:"Minor" },
+      fold: false,
+      masterVol: 0.85,
+      settings: window.ProjectIO.loadSettings(),
+      media: []
+    });
+    window.ProjectIO.autosave(brokenAutosave);
+    return Boolean(window.ProjectIO.loadAutosave());
+  })()`, true);
+  if (!autosaveRestore) failures.push("could not seed autosave project");
+
+  await win.reload();
+  await waitFor(win, "Boolean(document.body.innerText.includes('Autosave recovery available'))");
+  const restored = await win.webContents.executeJavaScript(`(async () => {
+    const restore = [...document.querySelectorAll("button")].find(button => button.textContent.trim() === "Restore");
+    if (!restore) return { restored:false, reason:"restore button missing" };
+    restore.click();
+    await new Promise(resolve => setTimeout(resolve, 250));
+    const text = document.body.innerText;
+    return {
+      restored: text.includes("Restored autosave"),
+      hasWarning: text.includes("Project media warning"),
+      hasMissingClip: text.includes("MISSING"),
+      autosaveCleared: !window.ProjectIO.loadAutosave(),
+      warningSummary: text.includes("missing media missing_media")
+    };
+  })()`, true);
+  if (!restored.restored) failures.push(restored.reason || "autosave restore notice did not appear");
+  if (!restored.hasWarning) failures.push("restored broken autosave did not show project media warning");
+  if (!restored.hasMissingClip) failures.push("restored broken autosave did not mark the clip as MISSING");
+  if (!restored.autosaveCleared) failures.push("autosave was not cleared after restore");
+  if (!restored.warningSummary) failures.push("media warning summary did not mention missing media ID");
+
   const render = await win.webContents.executeJavaScript(`(async () => {
     const project = window.ProjectIO.serialize({
       tracks: [{ id:"track_1", kind:"keys", type:"instrument", name:"Keys", vol:0.8, pan:0, clips:[{ id:"clip_1", start:0, len:1, name:"Notes", notes:[{ id:"note_1", p:60, s:0, l:1, v:0.8 }] }] }],
