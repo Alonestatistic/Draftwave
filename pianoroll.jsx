@@ -321,15 +321,15 @@ function PianoRoll(p) {
   );
 
   return (
-    <div className="no-sel" style={{height,display:"flex",flexDirection:"column",background:"var(--bg-2)",overflow:"hidden"}}>
-      <style>{`.daw-sel{height:28px;background:var(--bg-4);color:var(--tx);border:1px solid var(--line-2);
-        border-radius:6px;font-size:11.5px;font-family:var(--ui);padding:0 7px;outline:none;cursor:pointer;}
+    <div className="no-sel piano-shell" style={{height,display:"flex",flexDirection:"column",background:"var(--bg-2)",overflow:"hidden"}}>
+        <style>{`.daw-sel{height:28px;background:var(--metal),var(--bg-4);color:var(--tx);border:1px solid var(--line-2);
+        border-radius:6px;font-size:11.5px;font-family:var(--ui);padding:0 7px;outline:none;cursor:pointer;box-shadow:var(--sh-control);}
         .daw-sel:hover{border-color:var(--line-3);}`}</style>
 
       {/* TOOLBAR */}
       <div onContextMenu={(e)=>{e.preventDefault();p.onClose&&p.onClose();}}
         style={{flex:"0 0 auto",display:"flex",alignItems:"center",gap:10,padding:"7px 12px",
-          borderBottom:"1px solid var(--line-2)",background:"linear-gradient(var(--bg-3),var(--bg-2))",flexWrap:"wrap"}}>
+          borderBottom:"1px solid var(--line-2)",background:"var(--metal), var(--bg-2)",flexWrap:"wrap",boxShadow:"0 1px 0 rgba(255,255,255,.05) inset"}}>
         <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}>
           <span style={{width:10,height:10,borderRadius:3,background:cc,boxShadow:`0 0 8px ${cc}`,flex:"0 0 auto"}}/>
           <span style={{fontWeight:600,fontSize:12.5,whiteSpace:"nowrap"}}>{track.name}</span>
@@ -393,7 +393,7 @@ function PianoRoll(p) {
 
       {/* MAIN */}
       <div style={{flex:1,display:"flex",minHeight:0}}>
-        <div ref={keysRef} style={{width:62,flex:"0 0 auto",overflow:"hidden",borderRight:"1px solid var(--line-2)",background:"var(--bg-1)"}}>
+        <div ref={keysRef} className="hardware-panel" style={{width:62,flex:"0 0 auto",overflow:"hidden",borderRight:"1px solid var(--line-2)",background:"var(--bg-1)"}}>
           <div style={{position:"relative",height:gridH}}>
             {allRows.map((m,i)=>{ const blk=isBlack(m), inSc=inScale(m,rootPc,scale.name), root=(((m-rootPc)%12)+12)%12===0;
               return <div key={m} onPointerDown={()=>preview(m)}
@@ -407,11 +407,11 @@ function PianoRoll(p) {
         </div>
         <div ref={gridRef} onScroll={onScroll} onWheel={onWheel} onPointerDown={gridDown} onContextMenu={gridMenu}
           style={{flex:1,overflow:"auto",position:"relative",
-            cursor:tool==="draw"?"crosshair":tool==="erase"?"not-allowed":tool==="slice"?"col-resize":"default"}}>
+            background:"linear-gradient(180deg,rgba(255,255,255,.018),transparent)",cursor:tool==="draw"?"crosshair":tool==="erase"?"not-allowed":tool==="slice"?"col-resize":"default"}}>
           <div style={{position:"relative",width:gridW,height:gridH}}>
             {allRows.map((m,i)=>{ const blk=isBlack(m), inSc=inScale(m,rootPc,scale.name);
               return <div key={m} style={{position:"absolute",top:i*NH,left:0,width:gridW,height:NH,
-                background: !inSc?"rgba(0,0,0,.34)":(blk?"rgba(0,0,0,.16)":"transparent"),
+                background: !inSc?"rgba(0,0,0,.36)":(blk?"rgba(0,0,0,.18)":"rgba(255,255,255,.006)"),
                 borderBottom:`1px solid ${m%12===0?"var(--line-2)":"rgba(255,255,255,.025)"}`}}/>; })}
             {Array.from({length:beats+1}).map((_,b)=>(
               <div key={b} style={{position:"absolute",top:0,bottom:0,left:b*pxPerBeat,width:1,
@@ -424,10 +424,10 @@ function PianoRoll(p) {
               return <div key={n.id} onPointerDown={(e)=>noteDown(e,n)}
                 onContextMenu={(e)=>noteMenu(e,n)}
                 style={{position:"absolute",top:i*NH+1,left:n.s*pxPerBeat,height:NH-2,width:Math.max(n.l*pxPerBeat-1,4),
-                  borderRadius:3,background: n.muted?"var(--bg-5)":`linear-gradient(${cc},color-mix(in srgb,${cc} 75%,#000))`,
+                  borderRadius:4,background: n.muted?"var(--bg-5)":`linear-gradient(180deg,color-mix(in srgb,${cc} 88%,#fff 10%),color-mix(in srgb,${cc} 74%,#000))`,
                   border:`1px solid ${s?"#fff":(n.muted?"var(--line-3)":"color-mix(in srgb,#000 25%,"+cc+")")}`,
-                  opacity:n.muted?.45:(0.55+n.v*0.45),
-                  boxShadow:s?`0 0 0 1px #fff,0 0 10px ${cc}`:`0 1px 3px rgba(0,0,0,.4)`,
+                  opacity:n.muted ? .45 : (0.55+n.v*0.45),
+                  boxShadow:s?`0 0 0 1px #fff,0 0 14px ${cc},0 4px 12px rgba(0,0,0,.28)`:`0 1px 3px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.16)`,
                   cursor:tool==="erase"?"not-allowed":tool==="slice"?"col-resize":"grab"}}>
                 <span style={{position:"absolute",right:0,top:0,bottom:0,width:6,cursor:"ew-resize"}}/>
               </div>; })}
@@ -443,7 +443,7 @@ function PianoRoll(p) {
       </div>
 
       {/* VELOCITY */}
-      <div style={{height:62,flex:"0 0 auto",display:"flex",borderTop:"1px solid var(--line-2)",background:"var(--bg-1)"}}>
+      <div style={{height:62,flex:"0 0 auto",display:"flex",borderTop:"1px solid var(--line-2)",background:"var(--metal), var(--bg-1)"}}>
         <div style={{width:62,flex:"0 0 auto",borderRight:"1px solid var(--line-2)",display:"flex",alignItems:"center",
           justifyContent:"center",gap:5,color:"var(--tx-3)"}}>
           {React.cloneElement(I.vel,{style:{width:13,height:13}})}<span style={{fontSize:9,fontWeight:600,letterSpacing:".06em",textTransform:"uppercase"}}>{lane==="velocity"?"VEL":lane}</span>
@@ -453,7 +453,7 @@ function PianoRoll(p) {
             {lane==="velocity" ? notes.map(n=>(
               <div key={n.id} onPointerDown={(e)=>dragVel(e,n)}
                 style={{position:"absolute",bottom:0,left:n.s*pxPerBeat,width:Math.max(n.l*pxPerBeat-1,4),
-                  height:`${n.v*100}%`,background:isSel(n.id)?"#fff":cc,opacity:isSel(n.id)?.95:.65,
+                  height:`${n.v*100}%`,background:isSel(n.id)?"#fff":cc,opacity:isSel(n.id) ? .95 : .65,
                   borderRadius:"2px 2px 0 0",cursor:"ns-resize",boxShadow:`0 0 4px ${cc}`}}>
                 <div style={{position:"absolute",top:-2,left:0,right:0,height:3,borderRadius:2,background:isSel(n.id)?"#fff":cc}}/>
               </div>

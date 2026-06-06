@@ -68,11 +68,9 @@ function Assistant(p) {
   }
 
   return (
-    <aside className="no-sel" style={{width:330,flex:"0 0 auto",display:"flex",flexDirection:"column",
+    <aside className="no-sel assistant-panel" style={{width:330,flex:"0 0 auto",display:"flex",flexDirection:"column",
       background:"linear-gradient(180deg,var(--bg-2),var(--bg-1))",borderLeft:"1px solid var(--line-2)",
       position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",top:-80,right:-60,width:200,height:200,borderRadius:"50%",
-        background:"radial-gradient(circle,var(--cyan-glow),transparent 70%)",opacity:.4,pointerEvents:"none"}}/>
       {/* header */}
       <div style={{padding:"12px 14px",borderBottom:"1px solid var(--line)",display:"flex",alignItems:"center",gap:10,position:"relative"}}>
         <div style={{width:30,height:30,borderRadius:9,display:"grid",placeItems:"center",
@@ -104,7 +102,7 @@ function Assistant(p) {
       <div ref={scrollRef} style={{flex:1,overflowY:"auto",padding:"14px",display:"flex",flexDirection:"column",gap:12}}>
         {msgs.map((m,i)=>(
           <div key={i} style={{animation:"fadeUp .25s ease",alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"90%"}}>
-            <div style={{padding:"9px 12px",borderRadius:m.role==="user"?"12px 12px 3px 12px":"12px 12px 12px 3px",fontSize:12.5,lineHeight:1.5,
+            <div className="message-bubble" style={{padding:"9px 12px",borderRadius:m.role==="user"?"12px 12px 3px 12px":"12px 12px 12px 3px",fontSize:12.5,lineHeight:1.5,
               background: m.role==="user"?"var(--bg-4)":"color-mix(in srgb,var(--cyan) 10%,var(--bg-3))",
               border:`1px solid ${m.role==="user"?"var(--line-2)":"color-mix(in srgb,var(--cyan) 25%,transparent)"}`,
               color:"var(--tx)"}}>
@@ -132,8 +130,9 @@ function Assistant(p) {
       <div style={{padding:"0 12px 8px",display:"flex",flexWrap:"wrap",gap:6}}>
         {chips.map(c=>(
           <button key={c} onClick={()=>send(c)} disabled={busy}
+            className="hardware-control"
             style={{fontSize:10.5,padding:"5px 9px",borderRadius:99,background:"var(--bg-3)",border:"1px solid var(--line-2)",
-              color:"var(--tx-2)",transition:"all .14s",opacity:busy?.5:1}}
+              color:"var(--tx-2)",transition:"all .14s",opacity:busy ? .5 : 1}}
             onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--cyan)";e.currentTarget.style.color="var(--cyan)";}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--line-2)";e.currentTarget.style.color="var(--tx-2)";}}>
             {c}</button>
@@ -142,8 +141,8 @@ function Assistant(p) {
 
       {/* input */}
       <div style={{padding:"10px 12px 12px",borderTop:"1px solid var(--line)"}}>
-        <div style={{display:"flex",alignItems:"flex-end",gap:8,background:"var(--bg-1)",borderRadius:"var(--r-3)",
-          border:"1px solid var(--line-2)",padding:"7px 7px 7px 12px"}}>
+        <div className="daw-field" style={{display:"flex",alignItems:"flex-end",gap:8,borderRadius:"var(--r-3)",
+          padding:"7px 7px 7px 12px"}}>
           <textarea value={input} onChange={e=>setInput(e.target.value)} rows={1}
             onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} }}
             placeholder="Ask your producer…"

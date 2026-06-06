@@ -29,8 +29,8 @@ function Knob({ value, min=0, max=1, onChange, size=34, color="var(--cyan)", lab
           strokeDasharray={`${r*Math.PI*1.5} 999`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`}/>
         <path d={arc(a0,a1, norm>0.5?1:0)} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
           style={{filter:`drop-shadow(0 0 4px ${color})`}}/>
+        <circle cx={cx} cy={cy} r={r-5} fill="var(--bg-4)" stroke="var(--line)" style={{filter:"drop-shadow(0 2px 4px rgba(0,0,0,.35))"}}/>
         <line x1={cx} y1={cy} x2={pt(a1)[0]} y2={pt(a1)[1]} stroke="var(--tx)" strokeWidth="2" strokeLinecap="round"/>
-        <circle cx={cx} cy={cy} r={r-5} fill="var(--bg-4)" stroke="var(--line)" />
       </svg>
       {label && <span className="faint" style={{fontSize:9,textTransform:"uppercase",letterSpacing:".08em"}}>{label}</span>}
       {fmt && <span className="mono" style={{fontSize:9.5,color:"var(--tx-2)"}}>{fmt(value)}</span>}
@@ -54,11 +54,11 @@ function Fader({ value, onChange, height=120, color="var(--cyan)" }) {
     <div ref={ref} className="fader no-sel" onPointerDown={start}
       style={{position:"relative",width:30,height,cursor:"ns-resize",touchAction:"none"}}>
       <div style={{position:"absolute",left:"50%",top:0,bottom:0,width:4,transform:"translateX(-50%)",
-        background:"var(--bg-5)",borderRadius:99}}/>
+        background:"linear-gradient(90deg,var(--bg-4),var(--bg-6),var(--bg-4))",borderRadius:99,boxShadow:"inset 0 1px 3px rgba(0,0,0,.55)"}}/>
       <div style={{position:"absolute",left:"50%",bottom:0,width:4,height:`${value*100}%`,transform:"translateX(-50%)",
         background:`linear-gradient(${color},${color})`,borderRadius:99,boxShadow:`0 0 8px ${color}`}}/>
       <div style={{position:"absolute",left:"50%",bottom:`calc(${value*100}% - 9px)`,transform:"translateX(-50%)",
-        width:24,height:18,borderRadius:4,background:"var(--bg-5)",border:"1px solid var(--line-3)",
+        width:24,height:18,borderRadius:4,background:"var(--metal), var(--bg-5)",border:"1px solid var(--line-3)",
         boxShadow:"var(--sh-1)"}}>
         <div style={{position:"absolute",left:3,right:3,top:"50%",height:2,background:color,borderRadius:2,opacity:.9}}/>
       </div>
@@ -70,8 +70,8 @@ function Fader({ value, onChange, height=120, color="var(--cyan)" }) {
 function VuMeter({ level, height=120, w=7 }) {
   const pct = clamp(level,0,1);
   return (
-    <div style={{position:"relative",width:w,height,background:"var(--bg-1)",borderRadius:3,overflow:"hidden",
-      border:"1px solid var(--line)"}}>
+    <div className="meter-glow" style={{position:"relative",width:w,height,background:"linear-gradient(90deg,#05070b,#10151e,#05070b)",borderRadius:3,overflow:"hidden",
+      border:"1px solid var(--line)",boxShadow:"inset 0 1px 4px rgba(0,0,0,.65)"}}>
       <div style={{position:"absolute",left:0,right:0,bottom:0,height:`${pct*100}%`,
         background:"linear-gradient(0deg,var(--emerald) 0%,var(--emerald) 62%,var(--amber) 82%,var(--red) 100%)",
         transition:"height .05s linear",borderRadius:2}}/>

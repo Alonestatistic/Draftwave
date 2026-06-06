@@ -18,9 +18,10 @@ function Browser({ onAdd, onClose, media=[], onImportAudio }) {
       onDoubleClick={()=>onAdd(it)}
       title={`Double-click or drag to add · ${it.name}`}
       style={{display:"flex",alignItems:"center",gap:9,padding:"7px 9px",borderRadius:"var(--r-2)",cursor:"grab",
-        transition:"background .12s"}}>
+        transition:"background .12s, border-color .12s, box-shadow .12s"}}>
       <span style={{width:24,height:24,display:"grid",placeItems:"center",borderRadius:6,flex:"0 0 auto",
-        background:"var(--bg-4)",color:"var(--tx-2)"}}>
+        background:`linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)),${it.mediaId?"color-mix(in srgb,var(--cyan) 13%,var(--bg-4))":"var(--bg-4)"}`,
+        color:it.mediaId?"var(--cyan)":"var(--tx-2)",boxShadow:it.mediaId?"0 0 12px rgba(31,227,255,.10)":"none"}}>
         {React.cloneElement(I[TRACK_KINDS[it.kind]?.icon||"fx"],{style:{width:14,height:14}})}
       </span>
       <div style={{flex:1,minWidth:0}}>
@@ -45,7 +46,7 @@ function Browser({ onAdd, onClose, media=[], onImportAudio }) {
   const favItems = [...allItems,...mediaItems].filter(it=>favs.has(it.name) && match(it));
 
   return (
-    <aside className="no-sel" style={{width:248,flex:"0 0 auto",display:"flex",flexDirection:"column",
+    <aside className="no-sel browser-panel" style={{width:248,flex:"0 0 auto",display:"flex",flexDirection:"column",
       background:"var(--bg-2)",borderRight:"1px solid var(--line-2)",overflow:"hidden"}}>
       <style>{`
         .brow-item:hover{background:var(--bg-3);}
@@ -55,11 +56,10 @@ function Browser({ onAdd, onClose, media=[], onImportAudio }) {
 
       <div style={{padding:"12px 12px 10px",borderBottom:"1px solid var(--line)"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-          <span style={{fontSize:11,fontWeight:700,letterSpacing:".16em",color:"var(--tx-2)"}}>BROWSER</span>
+          <span className="section-kicker">BROWSER</span>
           <button className="iconbtn" style={{width:24,height:24}} onClick={onClose} title="Hide browser">{I.close}</button>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:8,height:34,padding:"0 11px",borderRadius:"var(--r-2)",
-          background:"var(--bg-1)",border:"1px solid var(--line-2)"}}>
+        <div className="daw-field" style={{display:"flex",alignItems:"center",gap:8,height:34,padding:"0 11px",borderRadius:"var(--r-2)"}}>
           {React.cloneElement(I.search,{style:{width:15,height:15,color:"var(--tx-3)",flex:"0 0 auto"}})}
           <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search everything…"
             style={{flex:1,background:"none",border:"none",outline:"none",color:"var(--tx)",fontSize:12.5}}/>
@@ -71,9 +71,9 @@ function Browser({ onAdd, onClose, media=[], onImportAudio }) {
       </div>
 
       <div style={{flex:1,overflowY:"auto",padding:"8px 8px 16px"}}>
-        <button onClick={onImportAudio} style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",marginBottom:8,
+        <button className="hardware-control" onClick={onImportAudio} style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",marginBottom:8,
           borderRadius:"var(--r-2)",background:"color-mix(in srgb,var(--cyan) 12%,var(--bg-3))",
-          border:"1px solid color-mix(in srgb,var(--cyan) 35%,transparent)",color:"var(--cyan)",fontWeight:700,fontSize:12}}>
+          border:"1px solid color-mix(in srgb,var(--cyan) 35%,transparent)",color:"var(--cyan)",fontWeight:750,fontSize:12}}>
           {React.cloneElement(I.wave,{style:{width:15,height:15}})}
           <span>Upload Sounds</span>
         </button>
