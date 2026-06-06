@@ -1,0 +1,125 @@
+/* ============================================================
+   THE DAW — design system
+   Fusion: neon-cyan sci-fi  ×  premium-minimal dark hardware
+   ============================================================ */
+
+:root {
+  /* surfaces — deep black → charcoal, layered */
+  --bg-0: #05060a;   /* void / behind everything */
+  --bg-1: #0a0c11;   /* app background */
+  --bg-2: #0f1218;   /* panels */
+  --bg-3: #151921;   /* raised panels / headers */
+  --bg-4: #1c212b;   /* controls, inputs */
+  --bg-5: #262d39;   /* hover / active control */
+
+  /* hairlines */
+  --line:    rgba(255,255,255,.06);
+  --line-2:  rgba(255,255,255,.10);
+  --line-3:  rgba(255,255,255,.16);
+
+  /* text */
+  --tx:      #eaeef6;
+  --tx-2:    #99a3b4;
+  --tx-3:    #616c7e;
+  --tx-4:    #424c5c;
+
+  /* accents */
+  --cyan:    #1fe3ff;
+  --cyan-d:  #0bb6d6;
+  --blue:    #3b82ff;
+  --purple:  #9b6bff;
+  --emerald: #1fe39a;
+  --amber:   #ffb53d;
+  --red:     #ff4d5e;
+
+  --cyan-glow:   color-mix(in srgb, var(--cyan) 35%, transparent);
+  --accent: var(--cyan);
+
+  /* track / clip color slots */
+  --t1: #1fe3ff; --t2: #9b6bff; --t3: #1fe39a; --t4: #ff7a59;
+  --t5: #3b82ff; --t6: #ffd84d; --t7: #ff5db1; --t8: #6ee7ff;
+
+  /* radii */
+  --r-1: 5px; --r-2: 8px; --r-3: 12px; --r-4: 16px; --r-pill: 999px;
+
+  /* type */
+  --ui: "Space Grotesk", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* shadows / glow */
+  --sh-1: 0 1px 0 rgba(255,255,255,.04) inset, 0 2px 8px rgba(0,0,0,.4);
+  --sh-2: 0 8px 30px rgba(0,0,0,.5);
+  --sh-pop: 0 18px 50px rgba(0,0,0,.6), 0 0 0 1px var(--line-2);
+
+  --transport-h: 60px;
+  --ruler-h: 30px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--ui);
+  background: var(--bg-0);
+  color: var(--tx);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  letter-spacing: .01em;
+}
+
+#root { height: 100vh; width: 100vw; }
+
+.mono { font-family: var(--mono); font-feature-settings: "tnum" 1; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--bg-4); border-radius: 99px;
+  border: 2px solid transparent; background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--bg-5); background-clip: padding-box; }
+
+button { font-family: inherit; color: inherit; border: none; background: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; transition: transform .08s cubic-bezier(.3,1.4,.5,1), background .14s ease, box-shadow .14s ease, color .14s ease, border-color .14s ease; }
+button:active { transform: scale(.93); }
+button:disabled { cursor: default; }
+.no-press:active { transform: none !important; }
+input { font-family: inherit; }
+
+::selection { background: color-mix(in srgb, var(--cyan) 35%, transparent); }
+
+/* context menu */
+.ctx-pop { animation: ctxIn .11s cubic-bezier(.2,1.1,.4,1); transform-origin: top left; }
+@keyframes ctxIn { from { opacity:0; transform: scale(.95) translateY(-3px); } to { opacity:1; transform:none; } }
+.ctx-item:active { transform: none !important; }
+.ctx-item:hover:not(:disabled) { background: var(--bg-4); }
+
+/* utility */
+.dim { color: var(--tx-2); }
+.faint { color: var(--tx-3); }
+.glow-text { text-shadow: 0 0 16px var(--cyan-glow); }
+.no-sel { user-select: none; -webkit-user-select: none; }
+
+/* generic icon button */
+.iconbtn {
+  display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: var(--r-2);
+  color: var(--tx-2); transition: all .14s ease;
+}
+.iconbtn:hover { background: var(--bg-4); color: var(--tx); }
+.iconbtn.active { color: var(--cyan); background: color-mix(in srgb, var(--cyan) 12%, transparent); }
+.iconbtn svg { width: 17px; height: 17px; display: block; }
+
+/* faint scanline / grain on the whole app for that sci-fi panel feel */
+.scan::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 9999;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 3px);
+  mix-blend-mode: overlay; opacity: .5;
+}
+
+@keyframes pulseRec { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes popIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes sweep { to { background-position: 200% 0; } }

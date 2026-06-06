@@ -1,0 +1,54 @@
+{
+  "name": "the-daw",
+  "version": "0.1.0",
+  "description": "The DAW desktop shell and renderer prototype",
+  "author": "The DAW Alpha",
+  "main": "electron/main.cjs",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "smoke": "node scripts/smoke-alpha.mjs",
+    "check": "npm run smoke && npm run build",
+    "desktop": "electron .",
+    "start": "concurrently -k \"npm:dev\" \"wait-on http://127.0.0.1:5173/The%20DAW.html && electron .\"",
+    "preview": "vite preview --host 127.0.0.1",
+    "package:win": "electron-builder --win --x64"
+  },
+  "build": {
+    "appId": "com.thedaw.alpha",
+    "productName": "The DAW",
+    "artifactName": "The-DAW-${version}-${os}-${arch}.${ext}",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "publisherName": "The DAW Alpha"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.4.1",
+    "concurrently": "^9.1.2",
+    "electron-builder": "^24.13.3",
+    "electron": "^31.7.7",
+    "vite": "^5.4.19",
+    "wait-on": "^7.2.0"
+  }
+}
