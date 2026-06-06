@@ -110,11 +110,12 @@ test("migrateProject preserves embedded media data urls for alpha save/load reli
   const migrated = migrateProject({
     version: 1,
     tracks: [{ id:"track_1", kind:"audio", clips:[{ id:"clip_1", audio:true, mediaId:"media_1", start:0, len:2 }] }],
-    media: [{ id:"media_1", name:"vox.webm", dataUrl:"data:audio/webm;base64,AAAA" }],
+    media: [{ id:"media_1", name:"vox.webm", waveform:[0.1,0.5,0.2], dataUrl:"data:audio/webm;base64,AAAA" }],
   });
 
   assert.equal(migrated.media[0].dataUrl, "data:audio/webm;base64,AAAA");
   assert.equal(migrated.media[0].format, "webm");
+  assert.deepEqual(migrated.media[0].waveform, [0.1,0.5,0.2]);
   assert.equal(migrated.migration.warnings.length, 0);
 });
 
@@ -162,4 +163,15 @@ test("validateProjectMedia warns when embedded media is large", () => {
   assert.equal(warnings.length, 1);
   assert.match(warnings[0], /long_take\.wav" embeds/);
   assert.match(warnings[0], /save slowly/);
+});
+
+test("validateProjectMedia warns on invalid waveform preview data", () => {
+  const warnings = validateProjectMedia({
+    version: PROJECT_VERSION,
+    tracks: [],
+    media: [{ id:"media_1", kind:"audio", name:"bad-wave.wav", waveform:"oops", dataUrl:"data:audio/wav;base64,AAAA" }],
+  });
+
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /invalid waveform preview data/);
 });

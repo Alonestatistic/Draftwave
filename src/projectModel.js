@@ -113,6 +113,7 @@ export function validateProjectMedia(project, options = {}) {
     if (!item?.id) warnings.push(`Media asset "${item?.name || "Untitled audio"}" has no asset ID.`);
     if (item?.kind && item.kind !== "audio") continue;
     const name = item?.name || item?.id || "Untitled audio";
+    if (item?.waveform && !Array.isArray(item.waveform)) warnings.push(`Media asset "${name}" has invalid waveform preview data.`);
     if (!item?.dataUrl) {
       warnings.push(`Media asset "${name}" has no embedded audio data and may not survive save/load.`);
       continue;

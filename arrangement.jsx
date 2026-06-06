@@ -2,7 +2,7 @@
    THE DAW — arrangement (timeline + tracks + clips)
    ============================================================ */
 
-function clipInner(clip, kind, color, h) {
+function clipInner(clip, kind, color, h, mediaById) {
   if (clip.notes && clip.notes.length) {
     const ps = clip.notes.map(n=>n.p), lo=Math.min(...ps)-1, hi=Math.max(...ps)+1, span=Math.max(hi-lo,6);
     const beats = clip.len * 4;
@@ -23,6 +23,13 @@ function clipInner(clip, kind, color, h) {
           background:on?color:"var(--line)",opacity:on?.85:1,boxShadow:on?`0 0 3px ${color}`:"none"}}/>; })}
     </div>;
   }
+  const waveform = clip.audio && clip.mediaId ? mediaById?.get(clip.mediaId)?.waveform : null;
+  if (Array.isArray(waveform) && waveform.length) {
+    return <div style={{position:"absolute",inset:"4px 5px",display:"flex",alignItems:"center",gap:1}}>
+      {waveform.map((v,i)=><div key={i} style={{flex:1,height:`${Math.max(5, v*100)}%`,background:color,opacity:.7,borderRadius:1,
+        boxShadow:v>.65?`0 0 3px ${color}`:"none"}}/>)}
+    </div>;
+  }
   const bars=Math.floor(clip.len*14); let seed=clip.id?clip.id.charCodeAt(0):7;
   const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
   return <div style={{position:"absolute",inset:"4px 5px",display:"flex",alignItems:"center",gap:1}}>
@@ -33,6 +40,7 @@ function clipInner(clip, kind, color, h) {
 
 function Arrangement(p) {
   const { tracks, pxPerBar, beatsPerBar, timelineBars, position, selClip, playing } = p;
+  const mediaById = p.mediaById || new Map();
   const bodyRef = React.useRef(null), rulerRef = React.useRef(null), headRef = React.useRef(null);
   const [dropHover, setDropHover] = React.useState(false);
   const HH = 78;
@@ -231,7 +239,7 @@ function Arrangement(p) {
                         {missingMedia && <span className="mono" title="This audio clip has no available media asset"
                           style={{marginLeft:"auto",fontSize:8,color:"var(--amber)",fontWeight:800,whiteSpace:"nowrap"}}>MISSING</span>}
                       </div>
-                      <div style={{position:"absolute",top:15,left:0,right:0,bottom:0}}>{clipInner(clip,t.kind,cc,HH-27)}</div>
+                      <div style={{position:"absolute",top:15,left:0,right:0,bottom:0}}>{clipInner(clip,t.kind,cc,HH-27,mediaById)}</div>
                       <div style={{position:"absolute",right:0,top:0,bottom:0,width:8,cursor:"ew-resize"}}/>
                     </div>
                   );

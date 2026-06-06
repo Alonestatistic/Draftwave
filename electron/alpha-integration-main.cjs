@@ -87,6 +87,73 @@ async function run() {
     if (!menu.labels?.some(text => text.includes(label))) failures.push(`project menu missing ${label}`);
   }
 
+  await waitFor(win, "Boolean(window.__THE_DAW_ALPHA_TEST__)");
+  const workflowLoaded = await win.webContents.executeJavaScript(`(async () => {
+    window.__THE_DAW_ALPHA_TEST__.loadWorkflowProject();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return window.__THE_DAW_ALPHA_TEST__.snapshot();
+  })()`, true);
+  if (workflowLoaded.tracks !== 2) failures.push("alpha workflow project did not create two tracks");
+  if (workflowLoaded.media !== 1) failures.push("alpha workflow project did not create one media asset");
+  if (workflowLoaded.waveformPoints < 4) failures.push("alpha workflow media did not preserve waveform preview data");
+  if (workflowLoaded.warnings.length) failures.push(`alpha workflow project unexpectedly had media warnings: ${workflowLoaded.warnings.join("; ")}`);
+
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.moveMidiClip(2)`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().midiStart === 2");
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.undo()`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().midiStart === 0");
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.redo()`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().midiStart === 2");
+
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.editMidiNote(64)`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().firstPitch === 64");
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.undo()`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().firstPitch === 60");
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.redo()`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().firstPitch === 64");
+
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.duplicateAudioClip()`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().audioClips === 2");
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.deleteDuplicatedAudioClip()`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().audioClips === 1");
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.undo()`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().audioClips === 2");
+  await win.webContents.executeJavaScript(`window.__THE_DAW_ALPHA_TEST__.redo()`, true);
+  await waitFor(win, "window.__THE_DAW_ALPHA_TEST__.snapshot().audioClips === 1");
+
+  const importedAudio = await win.webContents.executeJavaScript(`(async () => {
+    const project = window.ProjectIO.serialize({
+      tracks: [{ id:"import_src", kind:"keys", type:"instrument", name:"Import Src", vol:0.8, pan:0, clips:[{ id:"import_note", start:0, len:1, name:"Tone", notes:[{ id:"n", p:67, s:0, l:0.5, v:0.8 }] }] }],
+      bpm: 120,
+      sig: [4,4],
+      position: 0,
+      loop: { on:true, start:0, end:1 },
+      metro: false,
+      snap: true,
+      scale: { root:"C", name:"Minor" },
+      fold: false,
+      masterVol: 0.85,
+      settings: window.ProjectIO.loadSettings(),
+      media: []
+    });
+    const bytes = await window.RenderCore.renderWav(project, { sampleRate: 8000 });
+    const file = new File([bytes], "alpha_import.wav", { type:"audio/wav" });
+    const imported = await window.AudioCore.importAudioFiles([file]);
+    return {
+      count: imported.length,
+      name: imported[0]?.name,
+      format: imported[0]?.format,
+      dataUrl: imported[0]?.dataUrl?.startsWith("data:audio/wav;base64,"),
+      waveformPoints: imported[0]?.waveform?.length || 0,
+      duration: imported[0]?.duration || 0
+    };
+  })()`, true);
+  if (importedAudio.count !== 1) failures.push("generated WAV import did not return one media asset");
+  if (importedAudio.name !== "alpha_import.wav" || importedAudio.format !== "wav") failures.push("generated WAV import returned wrong name or format");
+  if (!importedAudio.dataUrl) failures.push("generated WAV import did not embed a data URL");
+  if (importedAudio.waveformPoints < 16) failures.push("generated WAV import did not create waveform preview data");
+  if (importedAudio.duration <= 0) failures.push("generated WAV import did not decode duration");
+
   const projectJson = await win.webContents.executeJavaScript(`JSON.stringify(window.ProjectIO.serialize({
     tracks: [{ id:"track_1", kind:"audio", type:"audio", name:"Audio", vol:0.8, pan:0, clips:[{ id:"clip_1", audio:true, mediaId:"media_1", start:0, len:1, name:"Clip" }] }],
     bpm: 120,
@@ -99,7 +166,7 @@ async function run() {
     fold: false,
     masterVol: 0.85,
     settings: window.ProjectIO.loadSettings(),
-    media: [{ id:"media_1", kind:"audio", name:"clip.wav", format:"wav", dataUrl:"data:audio/wav;base64,AAAA" }]
+    media: [{ id:"media_1", kind:"audio", name:"clip.wav", format:"wav", waveform:[0.1,0.5,0.2,0.8], dataUrl:"data:audio/wav;base64,AAAA" }]
   }))`, true);
   const saveResult = await win.webContents.executeJavaScript(`window.dawNative.saveProject(${JSON.stringify({ path:savePath, content:projectJson })})`, true);
   if (saveResult?.path !== savePath) failures.push("native saveProject did not return the requested path");
@@ -107,6 +174,7 @@ async function run() {
   const saved = JSON.parse(await fs.readFile(savePath, "utf8"));
   if (saved.version !== 2) failures.push(`saved project version was ${saved.version}`);
   if (saved.media?.[0]?.dataUrl !== "data:audio/wav;base64,AAAA") failures.push("saved project did not preserve embedded media data");
+  if (saved.media?.[0]?.waveform?.length !== 4) failures.push("saved project did not preserve waveform preview data");
 
   const autosaveRestore = await win.webContents.executeJavaScript(`(async () => {
     const brokenAutosave = window.ProjectIO.serialize({

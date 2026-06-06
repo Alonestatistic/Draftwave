@@ -37,15 +37,16 @@ await Promise.all([
   mustContain("src/main.jsx", [/import\("\.\.\/project\.jsx"\)/, /boot\(\)\.catch/]),
   mustContain("src/projectModel.js", [/export function migrateProject/, /export function serializeProjectState/, /export function hydrateProjectData/, /export function validateProjectMedia/]),
   mustContain("project.jsx", [/export const ProjectIO/, /validateMedia/, /clearAutosave/, /autosaveInfo/]),
-  mustContain("tests/projectModel.test.mjs", [/serializeProjectState/, /validateProjectMedia/, /embedded media data urls/]),
+  mustContain("tests/projectModel.test.mjs", [/serializeProjectState/, /validateProjectMedia/, /waveform preview data/]),
   mustContain("audiocore.jsx", [/export const AudioCore/, /export const MidiCore/]),
   mustContain("capabilities.jsx", [/export const CapabilityRegistry/, /Available/, /Experimental/, /Needs backend/]),
-  mustContain("app.jsx", [/Autosave recovery available/, /Report Issue/, /AppErrorBoundary/]),
+  mustContain("app.jsx", [/Autosave recovery available/, /Report Issue/, /AppErrorBoundary/, /__THE_DAW_ALPHA_TEST__/]),
   mustContain("electron/main.cjs", [/diagnostics:saveIssueReport/, /export:saveBinary/, /project:open/]),
-  mustContain("electron/alpha-integration-main.cjs", [/ProjectIO/, /Export Mixdown WAV/, /Autosave recovery available/, /RenderCore\.renderWav/]),
+  mustContain("electron/alpha-integration-main.cjs", [/ProjectIO/, /Export Mixdown WAV/, /Autosave recovery available/, /moveMidiClip/, /AudioCore\.importAudioFiles/, /RenderCore\.renderWav/]),
   mustContain("scripts/integration-alpha.cjs", [/require\("electron"\)/, /alpha-integration-main\.cjs/]),
   mustContain("docs/KNOWN_LIMITATIONS.md", [/VST hosting/, /SoundFont/, /Private Alpha/]),
   mustContain("docs/RELEASE_CHECKLIST.md", [/npm run check/, /Data-[Ll]oss/, /Windows/]),
+  mustContain("docs/ALPHA1_STATUS.md", [/Automated Coverage/, /microphone recording/, /Undo\/redo/]),
 ]);
 
 if (failures.length) {

@@ -21,6 +21,25 @@ const blobFromDataUrl = (dataUrl) => {
   return new Blob([bytes], { type:mime });
 };
 
+function waveformPeaks(buffer, points=96) {
+  if (!buffer) return [];
+  const out = [];
+  const length = buffer.length;
+  const channels = buffer.numberOfChannels;
+  const step = Math.max(1, Math.floor(length / points));
+  for (let i=0; i<points; i++) {
+    const start = i * step;
+    const end = Math.min(length, start + step);
+    let peak = 0;
+    for (let ch=0; ch<channels; ch++) {
+      const data = buffer.getChannelData(ch);
+      for (let j=start; j<end; j++) peak = Math.max(peak, Math.abs(data[j] || 0));
+    }
+    out.push(Math.round(Math.min(1, peak) * 1000) / 1000);
+  }
+  return out;
+}
+
 export const AudioCore = {
   async importAudioFiles(files) {
     const ctx = Audio.ensure();
@@ -43,6 +62,7 @@ export const AudioCore = {
         duration:buffer.duration,
         sampleRate:buffer.sampleRate,
         channels:buffer.numberOfChannels,
+        waveform:waveformPeaks(buffer),
         dataUrl,
       });
     }
@@ -82,7 +102,7 @@ export const AudioCore = {
         const id = uid();
         MEDIA_CACHE.set(id, { buffer, dataUrl, fileName:file.name, type:file.type });
         media = { id, name:file.name, kind:"audio", format:"webm", type:file.type, size:file.size,
-          duration:buffer.duration, sampleRate:buffer.sampleRate, channels:buffer.numberOfChannels, dataUrl };
+          duration:buffer.duration, sampleRate:buffer.sampleRate, channels:buffer.numberOfChannels, waveform:waveformPeaks(buffer), dataUrl };
       } catch (e) {
         onError&&onError(e);
       }
@@ -128,4 +148,4 @@ export const MidiCore = {
   },
 };
 
-Object.assign(window, { AudioCore, MidiCore, AUDIO_FORMATS, MEDIA_CACHE });
+Object.assign(window, { AudioCore, MidiCore, AUDIO_FORMATS, MEDIA_CACHE, waveformPeaks });

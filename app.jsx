@@ -389,6 +389,76 @@ function App(){
   };
 
   const currentProject=()=>ProjectIO.serialize({tracks,bpm,sig,position,loop,metro,snap,scale,fold,masterVol,settings,media});
+  const alphaWorkflowProject=()=>({
+    version: PROJECT_VERSION,
+    savedAt: new Date().toISOString(),
+    app: "The DAW",
+    transport:{ bpm:126, sig, position:0, loop:{on:true,start:0,end:8}, metro:false, snap:true },
+    music:{ scale:{root:"C",name:"Minor"}, fold:false },
+    mixer:{ masterVol:0.85 },
+    settings,
+    media:[{ id:"alpha_media", kind:"audio", name:"alpha_loop.wav", format:"wav", type:"audio/wav", size:4,
+      duration:2, sampleRate:48000, channels:1, waveform:[0.2,0.45,0.7,0.5,0.3,0.8,0.4,0.25], dataUrl:"data:audio/wav;base64,AAAA" }],
+    tracks:[
+      { id:"alpha_keys", name:"Alpha Keys", kind:"keys", type:"instrument", color:"var(--t1)", mute:false, solo:false, fav:false, vol:0.78, pan:0,
+        fxChain:defaultFxChain("keys"), instrument:defaultInstrumentState("keys"),
+        clips:[{ id:"alpha_midi_clip", start:0, len:4, name:"Alpha MIDI", notes:[{id:"alpha_note",p:60,s:0,l:1,v:0.8}] }] },
+      { id:"alpha_audio", name:"Alpha Audio", kind:"audio", type:"audio", color:"var(--t7)", mute:false, solo:false, fav:false, vol:0.78, pan:0,
+        fxChain:defaultFxChain("audio"), instrument:null,
+        clips:[{ id:"alpha_audio_clip", start:1, len:2, name:"Alpha Loop", audio:true, mediaId:"alpha_media", waveform:true }] },
+    ],
+  });
+
+  useEffect(()=>{
+    window.__THE_DAW_ALPHA_TEST__ = {
+      loadWorkflowProject() {
+        restoreProject(alphaWorkflowProject(), { notice:"Alpha workflow loaded" });
+        setSelTrack("alpha_keys");
+        setSelClip({ trackId:"alpha_keys", clipId:"alpha_midi_clip" });
+        return true;
+      },
+      moveMidiClip(start=2) {
+        recordHistory("Move clip");
+        setTracks(ts=>ts.map(t=>t.id!=="alpha_keys"?t:{...t,clips:t.clips.map(c=>c.id==="alpha_midi_clip"?{...c,start}:c)}));
+        return true;
+      },
+      editMidiNote(pitch=64) {
+        recordHistory("Edit notes");
+        setTracks(ts=>ts.map(t=>t.id!=="alpha_keys"?t:{...t,clips:t.clips.map(c=>c.id==="alpha_midi_clip"?{...c,notes:(c.notes||[]).map(n=>n.id==="alpha_note"?{...n,p:pitch}:n)}:c)}));
+        return true;
+      },
+      duplicateAudioClip() {
+        duplicateClip("alpha_audio", "alpha_audio_clip");
+        return true;
+      },
+      deleteDuplicatedAudioClip() {
+        const dup = tracksRef.current.find(t=>t.id==="alpha_audio")?.clips?.find(c=>c.id!=="alpha_audio_clip");
+        if (!dup) return false;
+        deleteClip("alpha_audio", dup.id);
+        return true;
+      },
+      undo: () => { undo(); return true; },
+      redo: () => { redo(); return true; },
+      snapshot() {
+        const project = currentProject();
+        const midiClip = project.tracks.find(t=>t.id==="alpha_keys")?.clips.find(c=>c.id==="alpha_midi_clip");
+        const audioTrack = project.tracks.find(t=>t.id==="alpha_audio");
+        return {
+          bpm:project.transport.bpm,
+          tracks:project.tracks.length,
+          media:project.media.length,
+          warnings:ProjectIO.validateMedia(project),
+          midiStart:midiClip?.start,
+          firstPitch:midiClip?.notes?.[0]?.p,
+          audioClips:audioTrack?.clips?.length || 0,
+          waveformPoints:project.media.find(m=>m.id==="alpha_media")?.waveform?.length || 0,
+          notice:projectNotice,
+        };
+      },
+    };
+    return ()=>{ delete window.__THE_DAW_ALPHA_TEST__; };
+  },[tracks,bpm,position,loop,metro,snap,scale,fold,masterVol,settings,media,projectNotice,undo,redo]);
+
   const renderMixdown=async()=>{
     try{
       setProjectNotice("Rendering WAV...");
@@ -648,7 +718,7 @@ function App(){
   const trackGain = selClipObj ? selClipObj.track.vol*masterVol : 0.8;
 
   const arrCtx = { tracks,pxPerBar,beatsPerBar,timelineBars:songBars,position,selClip,selTrack,playing,loop,snap,
-    mediaIds:new Set(media.map(m=>m.id)),
+    mediaIds:new Set(media.map(m=>m.id)), mediaById:new Map(media.map(m=>[m.id,m])),
     setZoom:setPxPerBar,setPosition,selectTrack,selectClip,moveClip,renameTrack,renameClip,toggleMute,toggleSolo,toggleFav,
     addTrack,dropItem,dropItemAt,openPiano,deleteTrack,duplicateTrack,silenceTrack,clearClips,duplicateClip,deleteClip,resizeClip,setLoopRange,
     setLoop, recordHistory, wheelZoom:settings.editing.wheelZoom, updateClip, splitClip };
