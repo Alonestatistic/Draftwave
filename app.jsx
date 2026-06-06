@@ -578,22 +578,26 @@ function App(){
     return Math.max(0.25,Math.ceil(beats*4)/4);
   };
 
-  const addAudioMediaAsTrack=(item,startBar=0)=>{
+  const addAudioMediaAsTrack=(item,startBar=0,{record=true}={})=>{
     const id=uid(); const color=PALETTE[tracksRef.current.length%PALETTE.length];
     const len=Math.max(1,Math.ceil(audioLenBars(item)));
     const tk={id,name:item.name.replace(/\.[^.]+$/,""),kind:"audio",type:"audio",color,mute:false,solo:false,fav:false,vol:0.78,pan:0,
       fxChain:defaultFxChain("audio"),instrument:null,
       clips:[{id:uid(),start:startBar,len,name:item.name,audio:true,mediaId:item.id,waveform:true}]};
-    setTracksProject("Import audio",ts=>[...ts,tk]);
+    const update=ts=>[...ts,tk];
+    if(record) setTracksProject("Import audio",update);
+    else setTracks(update);
     setSelTrack(id);
   };
 
-  const addAudioMediaToTrack=(trackId,item,startBar=0)=>{
+  const addAudioMediaToTrack=(trackId,item,startBar=0,{record=true}={})=>{
     const len=audioLenBars(item);
     const clipId=uid();
-    setTracksProject("Upload sound to track",ts=>ts.map(t=>t.id!==trackId?t:{...t,clips:[...(t.clips||[]),{
+    const update=ts=>ts.map(t=>t.id!==trackId?t:{...t,clips:[...(t.clips||[]),{
       id:clipId,start:startBar,len,name:item.name,audio:true,mediaId:item.id,waveform:true
-    }]}));
+    }]});
+    if(record) setTracksProject("Upload sound to track",update);
+    else setTracks(update);
     setSelTrack(trackId); setSelClip({trackId,clipId});
   };
 
@@ -607,8 +611,8 @@ function App(){
     setMediaWarnings([]);
     let cursor=startBar;
     imported.forEach(item=>{
-      if(targetTrackId) addAudioMediaToTrack(targetTrackId,item,cursor);
-      else addAudioMediaAsTrack(item,startBar);
+      if(targetTrackId) addAudioMediaToTrack(targetTrackId,item,cursor,{record:false});
+      else addAudioMediaAsTrack(item,startBar,{record:false});
       if(targetTrackId) cursor += audioLenBars(item);
     });
     setProjectNotice(targetTrackId
@@ -647,7 +651,7 @@ function App(){
           if(item){
             recordHistory("Microphone recording");
             setMedia(m=>[...m,item]);
-            addAudioMediaAsTrack(item,startBar);
+            addAudioMediaAsTrack(item,startBar,{record:false});
             setProjectNotice("Recorded "+item.name);
           }
         },
