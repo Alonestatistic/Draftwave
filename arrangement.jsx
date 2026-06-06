@@ -2,6 +2,13 @@
    Draftwave — arrangement (timeline + tracks + clips)
    ============================================================ */
 
+function formatClipTime(seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60).toString().padStart(2, "0");
+  return `${mins}:${secs}`;
+}
+
 function clipInner(clip, kind, color, h, mediaById) {
   if (clip.notes && clip.notes.length) {
     const ps = clip.notes.map(n=>n.p), lo=Math.min(...ps)-1, hi=Math.max(...ps)+1, span=Math.max(hi-lo,6);
@@ -15,9 +22,15 @@ function clipInner(clip, kind, color, h, mediaById) {
   }
   const waveform = clip.audio && clip.mediaId ? mediaById?.get(clip.mediaId)?.waveform : null;
   if (Array.isArray(waveform) && waveform.length) {
-    return <div style={{position:"absolute",inset:"4px 5px",display:"flex",alignItems:"center",gap:1}}>
-      {waveform.map((v,i)=><div key={i} style={{flex:1,height:`${Math.max(5, v*100)}%`,background:color,opacity:.7,borderRadius:1,
-        boxShadow:v>.65?`0 0 3px ${color}`:"none"}}/>)}
+    return <div className="audio-wave" style={{position:"absolute",inset:"4px 7px 6px",display:"flex",alignItems:"center",gap:1.5}}>
+      <div className="audio-wave-center" style={{position:"absolute",left:0,right:0,top:"50%",height:1,background:`color-mix(in srgb,${color} 42%,transparent)`}}/>
+      {waveform.map((v,i)=>{
+        const amp = Math.max(7, v * 92);
+        const hot = v > .72;
+        return <div key={i} style={{flex:"1 1 0",minWidth:1,height:`${amp}%`,borderRadius:2,
+          background:`linear-gradient(180deg,color-mix(in srgb,${color} 88%,#fff 12%),${color})`,
+          opacity:hot?.95:.74,boxShadow:hot?`0 0 8px color-mix(in srgb,${color} 72%,transparent)`:"none"}}/>;
+      })}
     </div>;
   }
   if (kind==="drum") {
@@ -201,6 +214,7 @@ function Arrangement(p) {
         </div>
 
         <div ref={bodyRef} onScroll={onScroll} onWheel={onWheel}
+          className={`arrangement-scroll ${dropHover?"drop-hover":""}`}
           onDragOver={(e)=>{e.preventDefault();setDropHover(true);}}
           onDragLeave={()=>setDropHover(false)}
           onDrop={(e)=>{ e.preventDefault(); setDropHover(false);
@@ -225,7 +239,7 @@ function Arrangement(p) {
               borderRight:"1px solid color-mix(in srgb,var(--cyan) 40%,transparent)",pointerEvents:"none"}}/>}
 
             {tracks.map((t,ti)=>(
-              <div key={t.id} onContextMenu={(e)=>{ if(e.target===e.currentTarget) laneMenu(e,t); }}
+              <div key={t.id} className={`track-lane ${p.selTrack===t.id?"selected":""}`} onContextMenu={(e)=>{ if(e.target===e.currentTarget) laneMenu(e,t); }}
                 onPointerDown={(e)=>{ if(e.target===e.currentTarget && e.button===0) p.setPosition(rulerToBeat(e.clientX)); }}
                 onDragOver={(e)=>{ if(e.dataTransfer.types?.includes("Files")){ e.preventDefault(); e.stopPropagation(); setDropHover(true); } }}
                 onDrop={(e)=>{ if(e.dataTransfer.files?.length){ e.preventDefault(); e.stopPropagation(); setDropHover(false);
@@ -235,25 +249,38 @@ function Arrangement(p) {
                 style={{position:"relative",height:HH,borderBottom:"1px solid var(--line)",
                   background: p.selTrack===t.id?"color-mix(in srgb,#fff 2.5%,transparent)":"transparent"}}>
                 {(t.clips||[]).map(clip=>{ const sel = selClip&&selClip.trackId===t.id&&selClip.clipId===clip.id; const cc=t.color;
+                  const mediaItem = clip.audio && clip.mediaId ? mediaById.get(clip.mediaId) : null;
                   const missingMedia = !!clip.audio && (!clip.mediaId || !p.mediaIds?.has(clip.mediaId));
+                  const isAudio = !!clip.audio;
+                  const clipMeta = isAudio ? [mediaItem?.format?.toUpperCase?.(), formatClipTime(mediaItem?.duration)].filter(Boolean).join(" - ") : "";
                   return (
                     <div key={clip.id} onPointerDown={(e)=>dragClip(e,ti,clip)}
                       onContextMenu={(e)=>clipMenu(e,t,clip)}
                       onDoubleClick={()=>{ p.selectClip(t.id,clip.id); if(clip.audio===undefined && t.kind!=="audio" && t.kind!=="drum") p.openPiano(); }}
-                      className="clip-el"
+                      className={`clip-el ${isAudio?"audio-clip-el":"midi-clip-el"} ${sel?"selected":""}`}
                       style={{position:"absolute",top:5,height:HH-12,left:clip.start*pxPerBar,width:clip.len*pxPerBar-2,
-                        borderRadius:7,overflow:"hidden",cursor:"grab",
-                        background:`color-mix(in srgb,${cc} 20%,var(--bg-3))`,
+                        "--clip-color":cc,borderRadius:7,overflow:"hidden",cursor:"grab",
+                        background:isAudio
+                          ? `linear-gradient(180deg,color-mix(in srgb,${cc} 30%,#ffffff 3%),color-mix(in srgb,${cc} 14%,var(--bg-2)) 46%,color-mix(in srgb,${cc} 24%,var(--bg-1)))`
+                          : `color-mix(in srgb,${cc} 20%,var(--bg-3))`,
                         border:`1.5px solid ${missingMedia?"var(--amber)":sel?cc:`color-mix(in srgb,${cc} 45%,transparent)`}`,
                         boxShadow: sel?`0 0 0 1px ${cc},0 6px 18px rgba(0,0,0,.4)`:"0 2px 6px rgba(0,0,0,.3)"}}>
-                      <div style={{height:15,display:"flex",alignItems:"center",padding:"0 7px",
-                        background:`color-mix(in srgb,${cc} 34%,transparent)`,gap:5}}>
-                        <span style={{fontSize:9.5,fontWeight:600,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",
+                      {isAudio && <div style={{position:"absolute",inset:0,pointerEvents:"none",
+                        background:`linear-gradient(90deg,color-mix(in srgb,${cc} 16%,transparent) 0 1px,transparent 1px 16px),
+                          radial-gradient(circle at 18% 0,color-mix(in srgb,${cc} 22%,transparent),transparent 38%)`,
+                        opacity:.6}}/>}
+                      <div style={{height:isAudio?18:15,display:"flex",alignItems:"center",padding:"0 7px",
+                        background:isAudio?`linear-gradient(90deg,color-mix(in srgb,${cc} 52%,#111722),color-mix(in srgb,${cc} 18%,transparent))`:`color-mix(in srgb,${cc} 34%,transparent)`,gap:5}}>
+                        {isAudio && <span style={{width:15,height:15,borderRadius:4,display:"grid",placeItems:"center",flex:"0 0 auto",
+                          background:"rgba(0,0,0,.24)",color:"#fff"}}>{React.cloneElement(I.wave,{style:{width:10,height:10}})}</span>}
+                        <span style={{fontSize:isAudio?10:9.5,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",
                           textOverflow:"ellipsis",textShadow:"0 1px 2px rgba(0,0,0,.5)"}}>{clip.name}</span>
+                        {clipMeta && <span className="mono" style={{marginLeft:"auto",fontSize:8.5,color:"rgba(255,255,255,.7)",whiteSpace:"nowrap"}}>{clipMeta}</span>}
                         {missingMedia && <span className="mono" title="This audio clip has no available media asset"
                           style={{marginLeft:"auto",fontSize:8,color:"var(--amber)",fontWeight:800,whiteSpace:"nowrap"}}>MISSING</span>}
                       </div>
-                      <div style={{position:"absolute",top:15,left:0,right:0,bottom:0}}>{clipInner(clip,t.kind,cc,HH-27,mediaById)}</div>
+                      <div style={{position:"absolute",top:isAudio?18:15,left:0,right:0,bottom:0}}>{clipInner(clip,t.kind,cc,HH-(isAudio?30:27),mediaById)}</div>
+                      {isAudio && <div style={{position:"absolute",left:0,right:0,bottom:0,height:2,background:`linear-gradient(90deg,${cc},transparent)`}}/>}
                       <div style={{position:"absolute",right:0,top:0,bottom:0,width:8,cursor:"ew-resize"}}/>
                     </div>
                   );
