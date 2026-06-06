@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — design system
+   Draftwave — design system
    Fusion: neon-cyan sci-fi  ×  premium-minimal dark hardware
    ============================================================ */
 
@@ -51,7 +51,7 @@
   --sh-2: 0 8px 30px rgba(0,0,0,.5);
   --sh-pop: 0 18px 50px rgba(0,0,0,.6), 0 0 0 1px var(--line-2);
 
-  --transport-h: 60px;
+  --transport-h: 92px;
   --ruler-h: 30px;
 }
 
@@ -111,6 +111,18 @@ input { font-family: inherit; }
 .iconbtn:hover { background: var(--bg-4); color: var(--tx); }
 .iconbtn.active { color: var(--cyan); background: color-mix(in srgb, var(--cyan) 12%, transparent); }
 .iconbtn svg { width: 17px; height: 17px; display: block; }
+
+.brand-mark {
+  filter: drop-shadow(0 0 10px rgba(31,227,255,.28));
+}
+
+.brand-word {
+  color: var(--tx);
+  font-size: 14.5px;
+  font-weight: 760;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
 
 /* faint scanline / grain on the whole app for that sci-fi panel feel */
 .scan::after {

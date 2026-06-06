@@ -19,7 +19,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        app: resolve(__dirname, "The DAW.html"),
+        app: resolve(__dirname, "Draftwave.html"),
       },
     },
   },

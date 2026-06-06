@@ -1,12 +1,27 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const fs = require("fs/promises");
 const path = require("path");
-const { fork } = require("child_process");
+const { fork, spawn } = require("child_process");
 
 const isDev = !app.isPackaged;
-const devUrl = "http://127.0.0.1:5173/The%20DAW.html";
-const builtHtml = path.join(__dirname, "..", "dist", "The DAW.html");
-const legacyHtml = path.join(__dirname, "..", "The DAW.html");
+const devUrl = "http://127.0.0.1:5173/Draftwave.html";
+const builtHtml = path.join(__dirname, "..", "dist", "Draftwave.html");
+const legacyHtml = path.join(__dirname, "..", "Draftwave.html");
+
+function appMetadata() {
+  return {
+    name: app.getName(),
+    version: app.getVersion(),
+    alphaPhase: "Alpha 4",
+    releaseChannel: "private-alpha",
+    packaged: app.isPackaged,
+    platform: process.platform,
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    node: process.versions.node,
+    userDataPath: app.getPath("userData"),
+  };
+}
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -14,7 +29,8 @@ function createWindow() {
     height: 920,
     minWidth: 1100,
     minHeight: 700,
-    title: "The DAW",
+    title: "Draftwave",
+    icon: path.join(__dirname, "..", "build", "icon.ico"),
     backgroundColor: "#05060a",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -49,7 +65,7 @@ function createPanelWindow(panel, state = {}) {
     height: state.height || 680,
     minWidth: 520,
     minHeight: 360,
-    title: `The DAW - ${panel}`,
+    title: `Draftwave - ${panel}`,
     backgroundColor: "#05060a",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -65,11 +81,19 @@ function createPanelWindow(panel, state = {}) {
 }
 
 app.whenReady().then(() => {
+  app.setAboutPanelOptions({
+    applicationName: "Draftwave",
+    applicationVersion: app.getVersion(),
+    version: "Private Alpha 4",
+    copyright: "Draftwave Alpha",
+  });
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
+ipcMain.handle("app:metadata", async () => appMetadata());
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
@@ -77,10 +101,10 @@ app.on("window-all-closed", () => {
 
 ipcMain.handle("project:saveAs", async (_event, payload) => {
   const result = await dialog.showSaveDialog({
-    title: "Save The DAW Project",
+    title: "Save Draftwave Project",
     defaultPath: payload?.suggestedName || "Untitled.dawproject.json",
     filters: [
-      { name: "The DAW Project", extensions: ["dawproject.json", "json"] },
+      { name: "Draftwave Project", extensions: ["dawproject.json", "json"] },
       { name: "JSON", extensions: ["json"] },
     ],
   });
@@ -97,10 +121,10 @@ ipcMain.handle("project:save", async (_event, payload) => {
 
 ipcMain.handle("project:open", async () => {
   const result = await dialog.showOpenDialog({
-    title: "Open The DAW Project",
+    title: "Open Draftwave Project",
     properties: ["openFile"],
     filters: [
-      { name: "The DAW Project", extensions: ["dawproject.json", "json"] },
+      { name: "Draftwave Project", extensions: ["dawproject.json", "json"] },
       { name: "JSON", extensions: ["json"] },
     ],
   });
@@ -120,8 +144,8 @@ ipcMain.handle("settings:save", async (_event, settings) => {
 
 ipcMain.handle("diagnostics:saveIssueReport", async (_event, payload) => {
   const result = await dialog.showSaveDialog({
-    title: "Save The DAW Issue Report",
-    defaultPath: payload?.suggestedName || "the-daw-issue-report.json",
+    title: "Save Draftwave Issue Report",
+    defaultPath: payload?.suggestedName || "draftwave-issue-report.json",
     filters: [{ name: "Issue Report", extensions: ["json"] }],
   });
   if (result.canceled || !result.filePath) return { canceled: true };
@@ -177,6 +201,76 @@ ipcMain.handle("plugins:scanNative", async () => new Promise((resolve) => {
   });
   child.send({ type:"scan" });
 }));
+
+ipcMain.handle("ollama:pullModel", async (event, payload) => {
+  const model = String(payload?.model || "").trim();
+  const baseUrl = String(payload?.url || "http://localhost:11434").replace(/\/$/, "");
+  if (!/^[A-Za-z0-9._:-]+$/.test(model)) return { ok:false, message:"Invalid Ollama model name." };
+  const send = (data) => event.sender.send("ollama:pullProgress", { model, ...data });
+
+  try {
+    send({ status:"Connecting to Ollama", percent:0 });
+    const response = await fetch(`${baseUrl}/api/pull`, {
+      method:"POST",
+      headers:{ "content-type":"application/json" },
+      body: JSON.stringify({ model, stream:true }),
+    });
+    if (!response.ok || !response.body) throw new Error(`Ollama API ${response.status}`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream:true });
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const msg = JSON.parse(line);
+        const total = Number(msg.total || 0);
+        const completed = Number(msg.completed || 0);
+        const percent = total ? Math.max(0, Math.min(100, Math.round((completed / total) * 100))) : undefined;
+        send({ status:msg.status || "Downloading", digest:msg.digest, total, completed, percent });
+      }
+    }
+    send({ status:"Ready", percent:100, done:true });
+    return { ok:true, model };
+  } catch (apiError) {
+    send({ status:"Ollama API unavailable; trying ollama CLI", message:String(apiError.message || apiError) });
+  }
+
+  return await new Promise((resolve) => {
+    const child = spawn("ollama", ["pull", model], { windowsHide:true });
+    let output = "";
+    child.stdout.on("data", (chunk) => {
+      const text = chunk.toString();
+      output += text;
+      const last = text.split(/\r|\n/).filter(Boolean).pop();
+      if (last) send({ status:last.slice(0, 160) });
+    });
+    child.stderr.on("data", (chunk) => {
+      const text = chunk.toString();
+      output += text;
+      const last = text.split(/\r|\n/).filter(Boolean).pop();
+      if (last) send({ status:last.slice(0, 160) });
+    });
+    child.on("error", (error) => {
+      send({ status:"Ollama CLI not found", error:String(error.message || error), done:true });
+      resolve({ ok:false, message:"Ollama is not installed or not on PATH. Install Ollama, then try again." });
+    });
+    child.on("exit", (code) => {
+      if (code === 0) {
+        send({ status:"Ready", percent:100, done:true });
+        resolve({ ok:true, model });
+      } else {
+        const message = output.trim().split(/\r?\n/).slice(-3).join(" ") || `ollama pull exited with ${code}`;
+        send({ status:"Download failed", error:message, done:true });
+        resolve({ ok:false, message });
+      }
+    });
+  });
+});
 
 ipcMain.handle("export:saveBinary", async (_event, payload) => {
   const result = await dialog.showSaveDialog({

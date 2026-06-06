@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 192" role="img" aria-labelledby="title desc">
+  <title id="title">Draftwave wordmark</title>
+  <desc id="desc">Draftwave logo mark with a compact uppercase wordmark.</desc>
+  <defs>
+    <linearGradient id="edge" x1="20" y1="18" x2="174" y2="174" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1fe3ff"/>
+      <stop offset=".52" stop-color="#9b6bff"/>
+      <stop offset="1" stop-color="#1fe39a"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="43" y1="88" x2="149" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1fe3ff"/>
+      <stop offset=".58" stop-color="#6ee7ff"/>
+      <stop offset="1" stop-color="#1fe39a"/>
+    </linearGradient>
+  </defs>
+  <rect width="780" height="192" fill="#05060a"/>
+  <g transform="translate(16 16)">
+    <path d="M80 0 160 80 80 160 0 80 80 0Z" fill="url(#edge)"/>
+    <path d="M80 13 147 80 80 147 13 80 80 13Z" fill="#0a0c11"/>
+    <path d="M80 24 136 80 80 136 24 80 80 24Z" fill="#111720"/>
+    <path d="M34 87c19-27 38-27 57 0s38 27 57 0" fill="none" stroke="#071015" stroke-width="24" stroke-linecap="round"/>
+    <path d="M34 80c19-27 38-27 57 0s38 27 57 0" fill="none" stroke="url(#wave)" stroke-width="13" stroke-linecap="round"/>
+  </g>
+  <text x="208" y="114" fill="#eaeef6" font-family="Space Grotesk, Inter, Arial, sans-serif" font-size="58" font-weight="700" letter-spacing="8">DRAFTWAVE</text>
+  <text x="212" y="146" fill="#99a3b4" font-family="JetBrains Mono, Consolas, monospace" font-size="16" font-weight="500" letter-spacing="4">CREATIVE SKETCH DAW</text>
+</svg>

@@ -34,7 +34,7 @@ test("serializeProjectState writes the current project schema", () => {
   });
 
   assert.equal(project.version, PROJECT_VERSION);
-  assert.equal(project.app, "The DAW");
+  assert.equal(project.app, "Draftwave");
   assert.deepEqual(project.transport, {
     bpm: 128,
     sig: [3, 4],

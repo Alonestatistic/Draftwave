@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — app shell, state, playback engine, action runner
+   Draftwave — app shell, state, playback engine, action runner
    ============================================================ */
 const { useState, useRef, useEffect, useMemo, useCallback } = React;
 const PALETTE = ["var(--t1)","var(--t2)","var(--t3)","var(--t4)","var(--t5)","var(--t6)","var(--t7)","var(--t8)"];
@@ -20,7 +20,7 @@ class AppErrorBoundary extends React.Component {
     return (
       <div style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"var(--bg-0)",color:"var(--tx)",padding:24}}>
         <div style={{width:"min(560px,100%)",border:"1px solid var(--line-2)",background:"var(--bg-2)",borderRadius:"var(--r-2)",padding:18,boxShadow:"var(--sh-pop)"}}>
-          <div style={{fontSize:18,fontWeight:800,marginBottom:8}}>The DAW hit a renderer error</div>
+          <div style={{fontSize:18,fontWeight:800,marginBottom:8}}>Draftwave hit a renderer error</div>
           <div className="dim" style={{marginBottom:14}}>Reload the app, then use Report Issue if this repeats.</div>
           <pre className="mono" style={{whiteSpace:"pre-wrap",fontSize:11,color:"var(--red)",background:"var(--bg-1)",padding:12,borderRadius:"var(--r-2)",border:"1px solid var(--line)"}}>
             {String(this.state.error?.stack || this.state.error?.message || this.state.error)}
@@ -52,6 +52,23 @@ function buildEvents(tracks){
     });
   });
   return ev.sort((a,b)=>a.beat-b.beat);
+}
+
+function keyComboMatches(e, combo) {
+  const parts = String(combo || "").split("+").map(p=>p.trim().toLowerCase()).filter(Boolean);
+  if (!parts.length) return false;
+  const wantsCtrl = parts.includes("ctrl") || parts.includes("cmd") || parts.includes("meta") || parts.includes("mod");
+  const wantsShift = parts.includes("shift");
+  const wantsAlt = parts.includes("alt") || parts.includes("option");
+  if ((e.ctrlKey || e.metaKey) !== wantsCtrl) return false;
+  if (!!e.shiftKey !== wantsShift) return false;
+  if (!!e.altKey !== wantsAlt) return false;
+  const key = parts.find(p=>!["ctrl","cmd","meta","mod","shift","alt","option"].includes(p));
+  if (!key) return false;
+  const eventKey = String(e.key || "").toLowerCase();
+  const eventCode = String(e.code || "").toLowerCase();
+  if (key === "space") return eventKey === " " || eventCode === "space";
+  return eventKey === key || eventCode === `key${key}` || eventCode === key;
 }
 
 function App(){
@@ -250,17 +267,20 @@ function App(){
   // global keyboard
   useEffect(()=>{ const k=(e)=>{ const tag=e.target.tagName;
     const typing = tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT";
+    const kb = settings.keybinds || DEFAULT_DAW_SETTINGS.keybinds;
     if((e.ctrlKey||e.metaKey) && (e.key==="="||e.key==="+")){ e.preventDefault(); setUiScale(s=>clamp(+(s+0.1).toFixed(2),0.6,1.6)); return; }
     if((e.ctrlKey||e.metaKey) && e.key==="-"){ e.preventDefault(); setUiScale(s=>clamp(+(s-0.1).toFixed(2),0.6,1.6)); return; }
     if((e.ctrlKey||e.metaKey) && e.key==="0"){ e.preventDefault(); setUiScale(1); return; }
-    if(!typing && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="s"){ e.preventDefault(); saveProject(e.shiftKey); return; }
-    if(!typing && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="o"){ e.preventDefault(); openProject(); return; }
-    if(!typing && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="n"){ e.preventDefault(); cleanSlate(); return; }
-    if(!typing && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="z"){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
+    if(!typing && keyComboMatches(e,kb.saveAs)){ e.preventDefault(); saveProject(true); return; }
+    if(!typing && keyComboMatches(e,kb.save)){ e.preventDefault(); saveProject(false); return; }
+    if(!typing && keyComboMatches(e,kb.open)){ e.preventDefault(); openProject(); return; }
+    if(!typing && keyComboMatches(e,kb.newProject)){ e.preventDefault(); cleanSlate(); return; }
+    if(!typing && keyComboMatches(e,kb.redo)){ e.preventDefault(); redo(); return; }
+    if(!typing && keyComboMatches(e,kb.undo)){ e.preventDefault(); undo(); return; }
     if(!typing && (e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="y"){ e.preventDefault(); redo(); return; }
     if(typing) return;
-    if(e.code==="Space"){e.preventDefault();onPlay();}
-    if(e.key.toLowerCase()==="s" && selClip && bottom!=="piano"){ e.preventDefault(); splitClip(selClip.trackId,selClip.clipId,posRef.current/beatsPerBar); return; }
+    if(keyComboMatches(e,kb.transport)){e.preventDefault();onPlay();}
+    if(keyComboMatches(e,kb.split) && selClip && bottom!=="piano"){ e.preventDefault(); splitClip(selClip.trackId,selClip.clipId,posRef.current/beatsPerBar); return; }
     if(e.key==="Enter"){setPosition(0);} };
     window.addEventListener("keydown",k); return ()=>window.removeEventListener("keydown",k); },[loop,projectPath,tracks,bpm,position,loop,metro,snap,scale,fold,masterVol,settings,undo,redo]);
 
@@ -274,6 +294,7 @@ function App(){
   const addFx=(id,effectId)=>upd(id,t=>({fxChain:[...(t.fxChain||[]),makeFx(effectId)]}),"Add effect");
   const toggleFx=(id,fxId)=>upd(id,t=>({fxChain:(t.fxChain||[]).map(f=>f.id===fxId?{...f,enabled:f.enabled===false}:f)}),"Toggle effect");
   const removeFx=(id,fxId)=>upd(id,t=>({fxChain:(t.fxChain||[]).filter(f=>f.id!==fxId)}),"Remove effect");
+  const updateFxParam=(id,fxId,param,value)=>upd(id,t=>({fxChain:(t.fxChain||[]).map(f=>f.id===fxId?{...f,params:{...(f.params||{}),[param]:value}}:f)}),"Effect parameter");
   const selectTrack=(id)=>setSelTrack(id);
   const selectClip=(trackId,clipId)=>{ setSelTrack(trackId); setSelClip({trackId,clipId}); };
   const moveClip=(trackId,clipId,start)=>setTracks(ts=>ts.map(t=>t.id!==trackId?t:{...t,clips:t.clips.map(c=>c.id===clipId?{...c,start}:c)}));
@@ -392,7 +413,7 @@ function App(){
   const alphaWorkflowProject=()=>({
     version: PROJECT_VERSION,
     savedAt: new Date().toISOString(),
-    app: "The DAW",
+    app: "Draftwave",
     transport:{ bpm:126, sig, position:0, loop:{on:true,start:0,end:8}, metro:false, snap:true },
     music:{ scale:{root:"C",name:"Minor"}, fold:false },
     mixer:{ masterVol:0.85 },
@@ -463,7 +484,7 @@ function App(){
     try{
       setProjectNotice("Rendering WAV...");
       const bytes=await RenderCore.renderWav(currentProject());
-      const res=await RenderCore.saveWav(bytes,"The DAW Mixdown.wav");
+      const res=await RenderCore.saveWav(bytes,"Draftwave Mixdown.wav");
       setProjectNotice(res?.path?`Rendered ${res.path}`:"Rendered WAV");
     } catch(e){ noteError("Render failed", e); }
   };
@@ -478,10 +499,14 @@ function App(){
   };
   const reportIssue=async()=>{
     try{
+      const appMeta = window.dawNative?.getAppMetadata
+        ? await window.dawNative.getAppMetadata()
+        : { name:"Draftwave", version:"0.1.0", alphaPhase:"Alpha 4", releaseChannel:"browser-dev", packaged:false,
+            platform:navigator.platform, electron:null };
       const report={
         createdAt:new Date().toISOString(),
-        app:{ name:"The DAW", version:window.dawNative?.appVersion || "0.1.0", electron:window.dawNative?.electronVersion || null },
-        platform:window.dawNative?.platform || navigator.platform,
+        app:appMeta,
+        platform:appMeta.platform || window.dawNative?.platform || navigator.platform,
         notice:projectNotice,
         projectPath,
         projectSummary:projectSummary(currentProject()),
@@ -491,10 +516,35 @@ function App(){
       };
       const content=JSON.stringify(report,null,2);
       const res=window.dawNative?.saveIssueReport
-        ? await window.dawNative.saveIssueReport({ content, suggestedName:"the-daw-issue-report.json" })
-        : await ProjectIO.downloadJson(report, "the-daw-issue-report.json");
+        ? await window.dawNative.saveIssueReport({ content, suggestedName:"draftwave-issue-report.json" })
+        : await ProjectIO.downloadJson(report, "draftwave-issue-report.json");
       setProjectNotice(res?.path?`Issue report saved ${res.path}`:"Issue report exported");
     } catch(e){ setProjectNotice("Issue report failed: "+String(e.message||e)); }
+  };
+  const exportTesterFeedback=async()=>{
+    try{
+      const appMeta = window.dawNative?.getAppMetadata
+        ? await window.dawNative.getAppMetadata()
+        : { name:"Draftwave", version:"0.1.0", alphaPhase:"Alpha 4", releaseChannel:"browser-dev", packaged:false,
+            platform:navigator.platform, electron:null };
+      const project=currentProject();
+      const warnings=ProjectIO.validateMedia(project);
+      const report=Alpha4.buildTesterFeedbackReport({
+        app:appMeta,
+        platform:appMeta.platform || window.dawNative?.platform || navigator.platform,
+        projectSummary:projectSummary(project),
+        mediaWarnings:warnings,
+        capabilities:CapabilityRegistry.all().map(({id,title,status,detail})=>({id,title,status,detail})),
+        recentErrors:recentErrorsRef.current,
+      });
+      const content=JSON.stringify(report,null,2);
+      const res=window.dawNative?.saveIssueReport
+        ? await window.dawNative.saveIssueReport({ content, suggestedName:"draftwave-alpha4-tester-feedback.json" })
+        : await ProjectIO.downloadJson(report, "draftwave-alpha4-tester-feedback.json");
+      setProjectNotice(report.stopShip.ok
+        ? (res?.path?`Tester feedback saved ${res.path}`:"Tester feedback exported")
+        : `STOP SHIP: ${report.stopShip.flags.length} data-loss flag${report.stopShip.flags.length===1?"":"s"}`);
+    } catch(e){ setProjectNotice("Tester feedback failed: "+String(e.message||e)); }
   };
   const loadTemplate=(templateId)=>{
     const tpl=TEMPLATE_PROJECTS.find(t=>t.id===templateId);
@@ -523,10 +573,14 @@ function App(){
     } catch(e){ noteError("Plugin scan failed", e); }
   };
 
+  const audioLenBars=(item)=>{
+    const beats=(item.duration||4)/(60/bpmRef.current);
+    return Math.max(0.25,Math.ceil(beats*4)/4);
+  };
+
   const addAudioMediaAsTrack=(item,startBar=0)=>{
     const id=uid(); const color=PALETTE[tracksRef.current.length%PALETTE.length];
-    const beats=(item.duration||4)/(60/bpmRef.current);
-    const len=Math.max(1,Math.ceil(beats/4));
+    const len=Math.max(1,Math.ceil(audioLenBars(item)));
     const tk={id,name:item.name.replace(/\.[^.]+$/,""),kind:"audio",type:"audio",color,mute:false,solo:false,fav:false,vol:0.78,pan:0,
       fxChain:defaultFxChain("audio"),instrument:null,
       clips:[{id:uid(),start:startBar,len,name:item.name,audio:true,mediaId:item.id,waveform:true}]};
@@ -534,7 +588,36 @@ function App(){
     setSelTrack(id);
   };
 
-  const importAudio=()=>{
+  const addAudioMediaToTrack=(trackId,item,startBar=0)=>{
+    const len=audioLenBars(item);
+    const clipId=uid();
+    setTracksProject("Upload sound to track",ts=>ts.map(t=>t.id!==trackId?t:{...t,clips:[...(t.clips||[]),{
+      id:clipId,start:startBar,len,name:item.name,audio:true,mediaId:item.id,waveform:true
+    }]}));
+    setSelTrack(trackId); setSelClip({trackId,clipId});
+  };
+
+  const importAudioFilesToProject=async(files,{targetTrackId=null,startBar=Math.floor(posRef.current/beatsPerBar)}={})=>{
+    const list=Array.from(files||[]);
+    if(!list.length) return [];
+    setProjectNotice(targetTrackId ? "Uploading sound to track..." : "Importing audio...");
+    const imported=await AudioCore.importAudioFiles(list);
+    recordHistory(targetTrackId ? "Upload sound to track" : "Import audio");
+    setMedia(m=>[...m,...imported]);
+    setMediaWarnings([]);
+    let cursor=startBar;
+    imported.forEach(item=>{
+      if(targetTrackId) addAudioMediaToTrack(targetTrackId,item,cursor);
+      else addAudioMediaAsTrack(item,startBar);
+      if(targetTrackId) cursor += audioLenBars(item);
+    });
+    setProjectNotice(targetTrackId
+      ? `Uploaded ${imported.length} sound${imported.length===1?"":"s"} to track`
+      : `Imported ${imported.length} audio file${imported.length===1?"":"s"}`);
+    return imported;
+  };
+
+  const importAudio=(targetTrackId=null,startBar=Math.floor(posRef.current/beatsPerBar))=>{
     const input=document.createElement("input");
     input.type="file";
     input.multiple=true;
@@ -543,13 +626,7 @@ function App(){
       const files=Array.from(input.files||[]);
       if(!files.length) return;
       try{
-        setProjectNotice("Importing audio...");
-        const imported=await AudioCore.importAudioFiles(files);
-        recordHistory("Import audio");
-        setMedia(m=>[...m,...imported]);
-        setMediaWarnings([]);
-        imported.forEach(item=>addAudioMediaAsTrack(item,Math.floor(posRef.current/beatsPerBar)));
-        setProjectNotice(`Imported ${imported.length} audio file${imported.length===1?"":"s"}`);
+        await importAudioFilesToProject(files,{targetTrackId,startBar});
       } catch(e){ noteError("Audio import failed", e); }
     };
     input.click();
@@ -602,7 +679,7 @@ function App(){
     } catch(e){ noteError("MIDI unavailable", e); }
   };
 
-  const appMenu=(e)=>openMenu(e,[
+  const appMenuItems=()=>[
     { header:"Project" },
     { label:"New - Clean Slate", icon:"newfile", shortcut:"Ctrl+N", onClick:cleanSlate },
     { label:"Open Project...", icon:"newfile", shortcut:"Ctrl+O", onClick:openProject },
@@ -634,6 +711,7 @@ function App(){
     { label:(showAssistant?"Hide":"Show")+" Assistant", icon:"spark", checked:showAssistant, onClick:()=>setShowAssistant(a=>!a) },
     { label:"Settings...", icon:"fx", onClick:()=>setShowSettings(true) },
     { label:"Report Issue...", icon:"spark", onClick:reportIssue },
+    { label:"Export Tester Feedback...", icon:"newfile", onClick:exportTesterFeedback },
     { sep:true },
     { header:"Edit" },
     { label:"Undo", shortcut:"Ctrl+Z", disabled:!historyRef.current.past.length, onClick:undo },
@@ -654,7 +732,13 @@ function App(){
     { label:"Reset Zoom (100%)", shortcut:"Ctrl+0", onClick:()=>setUiScale(1) },
     { sep:true },
     { header:projectPath?projectPath:projectNotice },
-  ]);
+  ];
+  const appMenu=(e)=>openMenu(e,appMenuItems());
+  React.useEffect(()=>{
+    const open=(e)=>window.dispatchEvent(new CustomEvent("daw:ctx",{ detail:{ x:e.detail?.x??12, y:e.detail?.y??12, items:appMenuItems().filter(Boolean) } }));
+    window.addEventListener("daw:appmenu",open);
+    return ()=>window.removeEventListener("daw:appmenu",open);
+  });
 
   // ---- assistant action runner ----
   const findTrack=(name)=>{ const ts=tracksRef.current;
@@ -716,12 +800,39 @@ function App(){
     const c=t&&t.clips.find(x=>x.id===selClip.clipId); return c?{clip:c,track:t}:null; })() : null;
   const playBeatInClip = selClipObj ? position - selClipObj.clip.start*beatsPerBar : null;
   const trackGain = selClipObj ? selClipObj.track.vol*masterVol : 0.8;
+  const quantizeSelectedClip=()=>{
+    if(!selClipObj?.clip?.notes){ setProjectNotice("Select a MIDI clip to quantize"); return; }
+    updateClip(selClip.trackId,selClip.clipId,c=>({...c,notes:(c.notes||[]).map(n=>({...n,s:Math.round(n.s*4)/4,l:Math.max(0.0625,Math.round(n.l*4)/4)}))}),"Quantize clip");
+    setProjectNotice("Quantized selected clip");
+  };
+  const humanizeSelectedClip=()=>{
+    if(!selClipObj?.clip?.notes){ setProjectNotice("Select a MIDI clip to humanize"); return; }
+    const timing=(settings.editing.humanizeTimingMs||0)/1000*(bpm/60);
+    const vel=(settings.editing.humanizeVelocity||0)/100;
+    updateClip(selClip.trackId,selClip.clipId,c=>({...c,notes:(c.notes||[]).map(n=>({...n,
+      s:Math.max(0,n.s+(Math.random()*2-1)*timing),
+      v:clamp((n.v??0.85)+(Math.random()*2-1)*vel,0.05,1)
+    }))}),"Humanize clip");
+    setProjectNotice("Humanized selected clip");
+  };
+  const splitSelectedClip=()=>{
+    if(!selClip){ setProjectNotice("Select a clip to split"); return; }
+    splitClip(selClip.trackId,selClip.clipId,posRef.current/beatsPerBar);
+  };
+  const duplicateSelectedClip=()=>{
+    if(!selClip){ setProjectNotice("Select a clip to duplicate"); return; }
+    duplicateClip(selClip.trackId,selClip.clipId);
+  };
 
   const arrCtx = { tracks,pxPerBar,beatsPerBar,timelineBars:songBars,position,selClip,selTrack,playing,loop,snap,
     mediaIds:new Set(media.map(m=>m.id)), mediaById:new Map(media.map(m=>[m.id,m])),
     setZoom:setPxPerBar,setPosition,selectTrack,selectClip,moveClip,renameTrack,renameClip,toggleMute,toggleSolo,toggleFav,
     addTrack,dropItem,dropItemAt,openPiano,deleteTrack,duplicateTrack,silenceTrack,clearClips,duplicateClip,deleteClip,resizeClip,setLoopRange,
-    setLoop, recordHistory, wheelZoom:settings.editing.wheelZoom, updateClip, splitClip };
+    setLoop, recordHistory, wheelZoom:settings.editing.wheelZoom, updateClip, splitClip,
+    onUploadSoundToTrack:(trackId,startBar)=>importAudio(trackId,startBar),
+    onDropAudioFilesToTrack:(files,trackId,startBar)=>importAudioFilesToProject(files,{targetTrackId:trackId,startBar}).catch(e=>noteError("Audio import failed", e)),
+    onDropAudioFilesAsTracks:(files,startBar)=>importAudioFilesToProject(files,{startBar}).catch(e=>noteError("Audio import failed", e)),
+    onDropError:(error)=>noteError("Drop failed", error) };
 
   return (
     <div className="scan" style={{height:"100vh",display:"flex",flexDirection:"column",position:"relative"}}>
@@ -729,10 +840,15 @@ function App(){
         projectNotice,nativeMode:!!window.dawNative,
         onAppMenu:appMenu,onPlay,onStop,onRec,onLoop:()=>setLoopProject(l=>{ const next={...l,on:!l.on}; setProjectNotice(next.on?"Loop enabled":"Loop disabled"); return next; }),onMetro:()=>{recordHistory("Metronome");setMetro(m=>!m);},
         onSnap:()=>setSnapProject(s=>!s),showBrowser,onBrowser:()=>setShowBrowser(b=>!b),
-        bottom,onBottom:(v)=>setBottom(b=>b===v?null:v),showAssistant,onAssistant:()=>setShowAssistant(a=>!a)}}/>
+        bottom,onBottom:(v)=>setBottom(b=>b===v?null:v),showAssistant,onAssistant:()=>setShowAssistant(a=>!a),
+        hasClip:!!selClipObj,hasMidiClip:!!selClipObj?.clip?.notes,
+        onSelectTool:()=>setProjectNotice("Select tool"),
+        onSplitClip:splitSelectedClip,onDuplicateClip:duplicateSelectedClip,
+        onQuantizeClip:quantizeSelectedClip,onHumanizeClip:humanizeSelectedClip,
+        onImportAudio:importAudio,onExportWav:renderMixdown,onSettings:()=>setShowSettings(true)}}/>
 
       <div style={{flex:1,display:"flex",minHeight:0}}>
-        {showBrowser && <Browser onAdd={dropItem} onClose={()=>setShowBrowser(false)} media={media}/>}
+        {showBrowser && <Browser onAdd={dropItem} onClose={()=>setShowBrowser(false)} media={media} onImportAudio={()=>importAudio()}/>}
 
         <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
           <Arrangement {...arrCtx}/>
@@ -754,7 +870,7 @@ function App(){
               {bottom==="mixer" && <Mixer height={bottomH} tracks={tracks} levels={levels} selTrack={selTrack}
                 selectTrack={selectTrack} setVol={setVol} setPan={setPan} toggleMute={toggleMute} toggleSolo={toggleSolo}
                 masterVol={masterVol} setMasterVol={setMasterVolProject} onAddFx={addFx} onToggleFx={toggleFx} onRemoveFx={removeFx}
-                onClose={()=>setBottom(null)}/>}
+                onUpdateFxParam={updateFxParam} onClose={()=>setBottom(null)}/>}
             </div>
           </>}
         </div>
@@ -800,4 +916,6 @@ function App(){
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<AppErrorBoundary><App/></AppErrorBoundary>);
+const rootEl = document.getElementById("root");
+window.__THE_DAW_REACT_ROOT__ = window.__THE_DAW_REACT_ROOT__ || ReactDOM.createRoot(rootEl);
+window.__THE_DAW_REACT_ROOT__.render(<AppErrorBoundary><App/></AppErrorBoundary>);

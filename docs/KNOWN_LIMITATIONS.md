@@ -1,4 +1,4 @@
-# The DAW Private Alpha Known Limitations
+# Draftwave Private Alpha Known Limitations
 
 This Private Alpha is a Windows-first creative sketch DAW. It is intended for composition, arrangement, quick MIDI ideas, simple audio clips, basic recording where available, save/load, autosave recovery, and WAV export.
 
@@ -34,3 +34,5 @@ This Private Alpha is a Windows-first creative sketch DAW. It is intended for co
 ## Tester Guidance
 
 Do not use Private Alpha builds for irreplaceable sessions. Keep backups of exported project files and report any data-loss, save/load, audio-device, import, recording, or export failure immediately with the app's Report Issue action.
+
+Before ending an Alpha 4 test session, use `Export Tester Feedback...` so the build can be checked against the known limitations and data-loss stop-ship rules.

@@ -13,6 +13,7 @@ async function boot() {
   await import("../audiocore.jsx");
   await import("../phase3.jsx");
   await import("../phase4.jsx");
+  await import("../alpha4.jsx");
   await import("../settings.jsx");
   await import("../transport.jsx");
   await import("../browser.jsx");
@@ -26,9 +27,12 @@ async function boot() {
 }
 
 boot().catch((error) => {
-  console.error("The DAW failed to boot", error);
+  console.error("Draftwave failed to boot", error);
   const root = document.getElementById("root");
   if (root) {
-    root.innerHTML = `<div style="padding:24px;color:#ff5f73;font-family:sans-serif">The DAW failed to boot: ${String(error?.message || error)}</div>`;
+    const fallback = document.createElement("div");
+    fallback.style.cssText = "padding:24px;color:#ff5f73;font-family:sans-serif";
+    fallback.textContent = `Draftwave failed to boot: ${String(error?.message || error)}`;
+    root.replaceChildren(fallback);
   }
 });

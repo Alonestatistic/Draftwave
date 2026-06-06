@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .vite/
+draftwave-*.exe
+draftwave-*.exe.blockmap
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

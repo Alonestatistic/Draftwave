@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW - Phase 4 native/advanced services
+   Draftwave - Phase 4 native/advanced services
    ============================================================ */
 
 const RENDER_FORMATS = ["wav", "mp3", "ogg", "flac"];
@@ -78,8 +78,9 @@ const RenderCore = {
     master.gain.value = project.mixer?.masterVol ?? 0.85;
     master.connect(ctx.destination);
     const spb = 60 / bpm;
+    const anySolo = (project.tracks || []).some(track => track.solo);
     for (const track of project.tracks || []) {
-      if (track.mute) continue;
+      if (track.mute || (anySolo && !track.solo)) continue;
       const gain = ctx.createGain();
       gain.gain.value = track.vol ?? 0.75;
       const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
@@ -110,11 +111,14 @@ const RenderCore = {
         } else if (clip.audio && clip.mediaId) {
           const buf = AudioCore.getBuffer(clip.mediaId);
           if (buf) {
+            const offset = Number(clip.offset || 0);
+            if (!Number.isFinite(offset) || offset >= buf.duration) continue;
+            const clipDur = Math.min(Math.max(0.01, buf.duration - Math.max(0, offset)), (clip.len||1)*4*spb);
             const src = ctx.createBufferSource(), g = ctx.createGain();
             src.buffer = buf; src.playbackRate.value = clip.playbackRate || 1;
             g.gain.value = clip.gain || 1;
             src.connect(g); g.connect(gain);
-            src.start(base, clip.offset||0, Math.min(buf.duration, (clip.len||1)*4*spb));
+            src.start(base, Math.max(0, offset), clipDur);
           }
         }
       }
@@ -133,7 +137,7 @@ const RenderCore = {
     src.buffer=buf; g.gain.setValueAtTime(amp,st); g.gain.exponentialRampToValueAtTime(0.001,st+dur);
     src.connect(g); g.connect(out); src.start(st); src.stop(st+dur);
   },
-  async saveWav(bytes, name="The DAW Mixdown.wav") {
+  async saveWav(bytes, name="Draftwave Mixdown.wav") {
     if (window.dawNative?.saveBinary) return window.dawNative.saveBinary({
       title:"Export WAV", defaultPath:name, base64:bytesToBase64(bytes), filters:[{name:"WAV Audio",extensions:["wav"]}],
     });

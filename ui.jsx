@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — shared UI widgets
+   Draftwave — shared UI widgets
    ============================================================ */
 
 /* Rotary knob — drag vertically to turn */

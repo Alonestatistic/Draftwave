@@ -1,8 +1,8 @@
 /* ============================================================
-   THE DAW — universal browser (left)
+   Draftwave — universal browser (left)
    ============================================================ */
 
-function Browser({ onAdd, onClose, media=[] }) {
+function Browser({ onAdd, onClose, media=[], onImportAudio }) {
   const [q, setQ] = React.useState("");
   const [open, setOpen] = React.useState({Instruments:true,Drums:true,Audio:true,Effects:false});
   const [favs, setFavs] = React.useState(()=>new Set(["FM Rhodes","Sub Bass 808"]));
@@ -71,6 +71,12 @@ function Browser({ onAdd, onClose, media=[] }) {
       </div>
 
       <div style={{flex:1,overflowY:"auto",padding:"8px 8px 16px"}}>
+        <button onClick={onImportAudio} style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"9px 10px",marginBottom:8,
+          borderRadius:"var(--r-2)",background:"color-mix(in srgb,var(--cyan) 12%,var(--bg-3))",
+          border:"1px solid color-mix(in srgb,var(--cyan) 35%,transparent)",color:"var(--cyan)",fontWeight:700,fontSize:12}}>
+          {React.cloneElement(I.wave,{style:{width:15,height:15}})}
+          <span>Upload Sounds</span>
+        </button>
         {tab==="fav" ? (
           favItems.length ? favItems.map(it=><Item key={it.name} it={it}/>)
           : <div className="faint" style={{textAlign:"center",fontSize:11,padding:"30px 10px"}}>No favorites match.</div>
@@ -99,7 +105,7 @@ function Browser({ onAdd, onClose, media=[] }) {
 
       <div style={{padding:"9px 12px",borderTop:"1px solid var(--line)",display:"flex",alignItems:"center",gap:8}}>
         {React.cloneElement(I.spark,{style:{width:13,height:13,color:"var(--cyan)"}})}
-        <span className="faint" style={{fontSize:10.5}}>Drag onto the timeline, or double-click to add</span>
+        <span className="faint" style={{fontSize:10.5}}>Upload, drag onto the timeline, or double-click to add</span>
       </div>
     </aside>
   );

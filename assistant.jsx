@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — The Assistant Producer (AI co-pilot)
+   Draftwave — The Assistant Producer (AI co-pilot)
    ============================================================ */
 
 const ACTION_SPEC = `
@@ -96,7 +96,7 @@ function Assistant(p) {
         </button>
         <button className="iconbtn" onClick={p.onClose} title="Hide">{I.close}</button>
       </div>
-      {showSettings && <AISettingsModal onClose={()=>setShowSettings(false)}
+      {showSettings && <AISettingsModal embedded onClose={()=>setShowSettings(false)}
         onSaved={()=>{ const nc=AI.load(); setCfg(nc);
           setMsgs(m=>[...m,{role:"assistant",text:`Switched engine — now running on ${AI.engineLabel(nc)}.`,acts:[]}]); }}/>}
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — piano roll  (multi-tool, multi-select, beat-builder)
+   Draftwave — piano roll  (multi-tool, multi-select, beat-builder)
    ============================================================ */
 
 const SNAPS = [

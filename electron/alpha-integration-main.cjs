@@ -4,7 +4,7 @@ const path = require("path");
 const os = require("os");
 
 const root = path.join(__dirname, "..");
-const builtHtml = path.join(root, "dist", "The DAW.html");
+const builtHtml = path.join(root, "dist", "Draftwave.html");
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -21,7 +21,7 @@ async function waitFor(win, expression, timeoutMs = 10000) {
 }
 
 async function run() {
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "the-daw-alpha-"));
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "draftwave-alpha-"));
   const savePath = path.join(tmpDir, "integration-save.dawproject.json");
   ipcMain.handle("project:save", async (_event, payload) => {
     if (!payload?.path) return { canceled:true, error:"Missing project path" };
@@ -70,7 +70,7 @@ async function run() {
     })).tracks.length
   }))()`, true);
 
-  if (boot.title !== "The DAW") failures.push(`unexpected title ${boot.title}`);
+  if (boot.title !== "Draftwave") failures.push(`unexpected title ${boot.title}`);
   if (!boot.hasHeader) failures.push("renderer header did not mount");
   if (boot.tracks !== 0) failures.push("empty project roundtrip produced tracks");
 
@@ -85,6 +85,41 @@ async function run() {
   if (!menu.opened) failures.push(menu.reason || "project menu did not open");
   for (const label of ["Open Project...", "Save Project", "Export Mixdown WAV"]) {
     if (!menu.labels?.some(text => text.includes(label))) failures.push(`project menu missing ${label}`);
+  }
+
+  const assistantSettingsLayout = await win.webContents.executeJavaScript(`(async () => {
+    const settingsButton = document.querySelector("button[title='AI engine settings']");
+    if (!settingsButton) return { ok:false, reason:"missing assistant settings button" };
+    settingsButton.click();
+    await new Promise(resolve => setTimeout(resolve, 150));
+    const ollamaButton = [...document.querySelectorAll("button")].find(button => button.textContent.includes("Ollama"));
+    if (ollamaButton) {
+      ollamaButton.click();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    const assistant = [...document.querySelectorAll("aside")].find(el => el.textContent.includes("Assistant Producer"));
+    const modal = document.querySelector(".modal");
+    if (!assistant || !modal) return { ok:false, reason:"assistant settings did not open" };
+    const assistantRect = assistant.getBoundingClientRect();
+    const modalRect = modal.getBoundingClientRect();
+    const overflowing = [...modal.querySelectorAll("button,input,textarea,div,span")].filter(el => {
+      const rect = el.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && (rect.left < assistantRect.left - 1 || rect.right > assistantRect.right + 1);
+    }).map(el => ({
+      tag: el.tagName,
+      text: (el.textContent || el.value || "").trim().slice(0, 60),
+      left: Math.round(el.getBoundingClientRect().left),
+      right: Math.round(el.getBoundingClientRect().right)
+    })).slice(0, 5);
+    return {
+      ok: overflowing.length === 0 && modalRect.left >= assistantRect.left - 1 && modalRect.right <= assistantRect.right + 1,
+      assistantWidth: Math.round(assistantRect.width),
+      modalWidth: Math.round(modalRect.width),
+      overflowing
+    };
+  })()`, true);
+  if (!assistantSettingsLayout.ok) {
+    failures.push(`assistant AI settings overflowed: ${assistantSettingsLayout.reason || JSON.stringify(assistantSettingsLayout)}`);
   }
 
   await waitFor(win, "Boolean(window.__THE_DAW_ALPHA_TEST__)");

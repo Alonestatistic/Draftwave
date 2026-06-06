@@ -1,8 +1,78 @@
 /* ============================================================
-   THE DAW — mixer console
+   Draftwave — mixer console
    ============================================================ */
 
-function ChannelStrip({ t, level, master, onVol, onPan, onMute, onSolo, sel, onSelect, anySolo, onAddFx, onToggleFx, onRemoveFx }) {
+function formatFxParam(value, def) {
+  if (def.percent) return `${Math.round((value || 0) * 100)}%`;
+  if (def.suffix) return `${Number(value || 0).toFixed(def.step < 1 ? 1 : 0)}${def.suffix}`;
+  if (def.unit) return `${Number(value || 0).toFixed(def.step < 1 ? 1 : 0)}${def.unit}`;
+  return String(value);
+}
+
+function FxBadge({ status }) {
+  const isPreview = status === "preview";
+  return (
+    <span className="mono" title={isPreview ? "Audible in the built-in preview engine" : "Saved in the project; full DSP rendering is not modeled yet"}
+      style={{fontSize:8.5,fontWeight:800,padding:"2px 5px",borderRadius:99,whiteSpace:"nowrap",
+        color:isPreview?"var(--emerald)":"var(--amber)",
+        background:isPreview?"color-mix(in srgb,var(--emerald) 12%,transparent)":"color-mix(in srgb,var(--amber) 12%,transparent)",
+        border:`1px solid ${isPreview?"color-mix(in srgb,var(--emerald) 32%,transparent)":"color-mix(in srgb,var(--amber) 32%,transparent)"}`}}>
+      {isPreview ? "PREVIEW" : "SAVED"}
+    </span>
+  );
+}
+
+function FxParamControl({ name, value, color, onChange }) {
+  const def = getFxParamDef(name);
+  if (def.options) {
+    return (
+      <label style={{display:"flex",flexDirection:"column",gap:4,minWidth:0,width:"100%"}}>
+        <span className="faint" style={{fontSize:8.5,textTransform:"uppercase",letterSpacing:".08em"}}>{def.label}</span>
+        <select value={value} onChange={e=>onChange(e.target.value)}
+          style={{height:24,background:"var(--bg-1)",border:"1px solid var(--line-2)",borderRadius:5,
+            color:"var(--tx)",fontSize:10.5,padding:"0 5px",outline:"none"}}>
+          {def.options.map(o=><option key={o} value={o}>{o}</option>)}
+        </select>
+      </label>
+    );
+  }
+  return (
+    <Knob value={Number(value ?? 0)} min={def.min ?? 0} max={def.max ?? 1}
+      onChange={v=>onChange(def.step >= 1 ? Math.round(v) : +v.toFixed(3))}
+      size={28} color={color} label={def.label} fmt={v=>formatFxParam(v, def)}/>
+  );
+}
+
+function FxEditor({ trackId, fx, color, onToggleFx, onRemoveFx, onUpdateFxParam }) {
+  const meta = getFxMeta(fx.effectId);
+  const params = fx.params || {};
+  return (
+    <div style={{marginTop:4,padding:"7px 6px",borderRadius:6,background:"var(--bg-1)",border:"1px solid var(--line)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:7}}>
+        <FxBadge status={meta.status}/>
+        <span className="faint" style={{fontSize:9.5,flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{meta.category}</span>
+        <button onClick={(e)=>{e.stopPropagation();onToggleFx&&onToggleFx(trackId,fx.id);}}
+          title={fx.enabled===false?"Enable effect":"Bypass effect"}
+          style={{width:22,height:20,borderRadius:4,fontSize:9,fontWeight:800,
+            background:fx.enabled===false?"var(--amber)":"var(--bg-4)",
+            color:fx.enabled===false?"#1a1205":"var(--tx-2)"}}>B</button>
+        <button onClick={(e)=>{e.stopPropagation();onRemoveFx&&onRemoveFx(trackId,fx.id);}}
+          title="Remove effect" style={{width:22,height:20,borderRadius:4,display:"grid",placeItems:"center",color:"var(--tx-2)",background:"var(--bg-4)"}}>
+          {React.cloneElement(I.trash,{style:{width:11,height:11}})}
+        </button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:"8px 5px",justifyItems:"center"}}>
+        {Object.keys(params).map(name=>(
+          <FxParamControl key={name} name={name} value={params[name]} color={color}
+            onChange={value=>onUpdateFxParam&&onUpdateFxParam(trackId,fx.id,name,value)}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChannelStrip({ t, level, master, onVol, onPan, onMute, onSolo, sel, onSelect, anySolo, onAddFx, onToggleFx, onRemoveFx, onUpdateFxParam }) {
+  const [openFx, setOpenFx] = React.useState(null);
   const dimmed = !master && ((anySolo && !t.solo) || t.mute);
   const db = t.vol<=0?"-∞":(20*Math.log10(t.vol)).toFixed(1);
   const cc = master?"var(--cyan)":t.color;
@@ -13,7 +83,7 @@ function ChannelStrip({ t, level, master, onVol, onPan, onMute, onSolo, sel, onS
   ]);
   return (
     <div onPointerDown={()=>!master&&onSelect(t.id)} className="no-sel"
-      style={{width:master?108:92,flex:"0 0 auto",display:"flex",flexDirection:"column",
+      style={{width:master?112:132,flex:"0 0 auto",display:"flex",flexDirection:"column",
         background: master?"linear-gradient(var(--bg-3),var(--bg-2))":(sel?"color-mix(in srgb,var(--cyan) 6%,var(--bg-2))":"var(--bg-2)"),
         borderRight:"1px solid var(--line)",opacity:dimmed?.45:1,transition:"opacity .15s,background .15s",
         borderTop:`2px solid ${master?"var(--cyan)":t.color}`}}>
@@ -26,15 +96,20 @@ function ChannelStrip({ t, level, master, onVol, onPan, onMute, onSolo, sel, onS
       {/* fx chain */}
       <div style={{padding:"7px 7px",display:"flex",flexDirection:"column",gap:4,borderBottom:"1px solid var(--line)"}}>
         {fx.map((f,i)=>(
-          <div key={f.id||i} onContextMenu={(e)=>!master&&openMenu(e,[
+          <div key={f.id||i}>
+          <div onClick={()=>!master&&setOpenFx(openFx===f.id?null:f.id)} onContextMenu={(e)=>!master&&openMenu(e,[
               { header:f.name },
               { label:f.enabled===false?"Enable":"Disable", checked:f.enabled!==false, onClick:()=>onToggleFx&&onToggleFx(t.id,f.id) },
               { label:"Remove Effect", icon:"trash", danger:true, onClick:()=>onRemoveFx&&onRemoveFx(t.id,f.id) },
             ])}
             style={{display:"flex",alignItems:"center",gap:5,height:19,padding:"0 6px",borderRadius:4,
-            background:"var(--bg-4)",fontSize:9.5,color:"var(--tx-2)"}}>
+            background:openFx===f.id?"color-mix(in srgb,var(--cyan) 9%,var(--bg-4))":"var(--bg-4)",fontSize:9.5,color:"var(--tx-2)",cursor:master?"default":"pointer"}}>
             <span style={{width:4,height:4,borderRadius:99,background:f.enabled===false?"var(--tx-4)":cc,boxShadow:f.enabled===false?"none":`0 0 4px ${cc}`}}/>
             <span style={{flex:1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",opacity:f.enabled===false?0.45:1}}>{f.name}</span>
+            {!master && <FxBadge status={getFxMeta(f.effectId).status}/>}
+          </div>
+          {!master && openFx===f.id && <FxEditor trackId={t.id} fx={f} color={cc}
+            onToggleFx={onToggleFx} onRemoveFx={onRemoveFx} onUpdateFxParam={onUpdateFxParam}/>}
           </div>
         ))}
         {!master && <button onClick={fxMenu} style={{height:18,borderRadius:4,border:"1px dashed var(--line-3)",color:"var(--tx-3)",fontSize:9.5,
@@ -88,7 +163,7 @@ function Mixer(p) {
         {p.tracks.map(t=>(
           <ChannelStrip key={t.id} t={t} level={p.levels[t.id]||0} anySolo={anySolo} sel={p.selTrack===t.id}
             onSelect={p.selectTrack} onVol={p.setVol} onPan={p.setPan} onMute={p.toggleMute} onSolo={p.toggleSolo}
-            onAddFx={p.onAddFx} onToggleFx={p.onToggleFx} onRemoveFx={p.onRemoveFx}/>
+            onAddFx={p.onAddFx} onToggleFx={p.onToggleFx} onRemoveFx={p.onRemoveFx} onUpdateFxParam={p.onUpdateFxParam}/>
         ))}
         <div style={{flex:1,minWidth:14}}/>
         <ChannelStrip t={{name:"MASTER",vol:p.masterVol,pan:0}} master level={masterLvl}

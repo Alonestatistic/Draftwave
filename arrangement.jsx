@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — arrangement (timeline + tracks + clips)
+   Draftwave — arrangement (timeline + tracks + clips)
    ============================================================ */
 
 function clipInner(clip, kind, color, h, mediaById) {
@@ -13,6 +13,13 @@ function clipInner(clip, kind, color, h, mediaById) {
         boxShadow:`0 0 4px ${color}`}}/>;
     });
   }
+  const waveform = clip.audio && clip.mediaId ? mediaById?.get(clip.mediaId)?.waveform : null;
+  if (Array.isArray(waveform) && waveform.length) {
+    return <div style={{position:"absolute",inset:"4px 5px",display:"flex",alignItems:"center",gap:1}}>
+      {waveform.map((v,i)=><div key={i} style={{flex:1,height:`${Math.max(5, v*100)}%`,background:color,opacity:.7,borderRadius:1,
+        boxShadow:v>.65?`0 0 3px ${color}`:"none"}}/>)}
+    </div>;
+  }
   if (kind==="drum") {
     const cells = clip.len*4*2;
     return <div style={{position:"absolute",inset:"6px 4px",display:"grid",
@@ -21,13 +28,6 @@ function clipInner(clip, kind, color, h, mediaById) {
         const on = (row===0&&col%8===0)||(row===1&&col%8===4)||(row===2&&col%2===0);
         return <div key={i} style={{height:on?"100%":2,borderRadius:1,
           background:on?color:"var(--line)",opacity:on?.85:1,boxShadow:on?`0 0 3px ${color}`:"none"}}/>; })}
-    </div>;
-  }
-  const waveform = clip.audio && clip.mediaId ? mediaById?.get(clip.mediaId)?.waveform : null;
-  if (Array.isArray(waveform) && waveform.length) {
-    return <div style={{position:"absolute",inset:"4px 5px",display:"flex",alignItems:"center",gap:1}}>
-      {waveform.map((v,i)=><div key={i} style={{flex:1,height:`${Math.max(5, v*100)}%`,background:color,opacity:.7,borderRadius:1,
-        boxShadow:v>.65?`0 0 3px ${color}`:"none"}}/>)}
     </div>;
   }
   const bars=Math.floor(clip.len*14); let seed=clip.id?clip.id.charCodeAt(0):7;
@@ -112,6 +112,7 @@ function Arrangement(p) {
   const laneMenu=(e,t)=>{ const bar=Math.floor(rulerToBeat(e.clientX)/beatsPerBar);
     openMenu(e,[
       { header:t.name },
+      { label:"Upload Sound Here", icon:"wave", onClick:()=>p.onUploadSoundToTrack&&p.onUploadSoundToTrack(t.id,bar) },
       { label:"Add Empty Clip Here", icon:"plus", disabled:t.kind==="drum",
         onClick:()=>p.dropItemAt&&p.dropItemAt(t.id,bar) },
       { label:"Set Playhead Here", icon:"pointer", onClick:()=>p.setPosition(rulerToBeat(e.clientX)) },
@@ -201,9 +202,15 @@ function Arrangement(p) {
           onDragOver={(e)=>{e.preventDefault();setDropHover(true);}}
           onDragLeave={()=>setDropHover(false)}
           onDrop={(e)=>{ e.preventDefault(); setDropHover(false);
+            if(e.dataTransfer.files?.length){
+              const bar=Math.floor(rulerToBeat(e.clientX)/beatsPerBar);
+              p.onDropAudioFilesAsTracks&&p.onDropAudioFilesAsTracks(e.dataTransfer.files,bar);
+              return;
+            }
             const raw=e.dataTransfer.getData("text/daw-item"); if(!raw) return;
             const bar=Math.floor(rulerToBeat(e.clientX)/beatsPerBar);
-            p.dropItem(JSON.parse(raw), bar); }}
+            try { p.dropItem(JSON.parse(raw), bar); }
+            catch (error) { p.onDropError&&p.onDropError(error); } }}
           style={{flex:1,overflow:"auto",position:"relative",background: dropHover?"color-mix(in srgb,var(--cyan) 5%,var(--bg-1))":"var(--bg-1)",transition:"background .15s"}}>
           <div style={{position:"relative",width:tlW,minHeight:"100%"}}>
             <div style={{position:"absolute",inset:0,pointerEvents:"none",
@@ -218,6 +225,11 @@ function Arrangement(p) {
             {tracks.map((t,ti)=>(
               <div key={t.id} onContextMenu={(e)=>{ if(e.target===e.currentTarget) laneMenu(e,t); }}
                 onPointerDown={(e)=>{ if(e.target===e.currentTarget && e.button===0) p.setPosition(rulerToBeat(e.clientX)); }}
+                onDragOver={(e)=>{ if(e.dataTransfer.types?.includes("Files")){ e.preventDefault(); e.stopPropagation(); setDropHover(true); } }}
+                onDrop={(e)=>{ if(e.dataTransfer.files?.length){ e.preventDefault(); e.stopPropagation(); setDropHover(false);
+                  const bar=Math.floor(rulerToBeat(e.clientX)/beatsPerBar);
+                  p.onDropAudioFilesToTrack&&p.onDropAudioFilesToTrack(e.dataTransfer.files,t.id,bar);
+                } }}
                 style={{position:"relative",height:HH,borderBottom:"1px solid var(--line)",
                   background: p.selTrack===t.id?"color-mix(in srgb,#fff 2.5%,transparent)":"transparent"}}>
                 {(t.clips||[]).map(clip=>{ const sel = selClip&&selClip.trackId===t.id&&selClip.clipId===clip.id; const cc=t.color;
@@ -265,6 +277,7 @@ function TrackHead(p) {
   const menu=(e)=>openMenu(e,[
     { header:t.name },
     { label:"Rename", icon:"pencil", onClick:()=>setEditing(true) },
+    { label:"Upload Sound to Track", icon:"wave", onClick:()=>p.onUploadSoundToTrack&&p.onUploadSoundToTrack(t.id,Math.floor((p.position||0)/(p.beatsPerBar||4))) },
     { label:"Duplicate Track", icon:"duplicate", onClick:()=>p.duplicateTrack(t.id) },
     { label:t.fav?"Unfavorite":"Favorite", icon:"star", checked:t.fav, onClick:()=>p.toggleFav(t.id) },
     { sep:true },

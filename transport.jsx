@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — transport bar (top, always visible)
+   Draftwave — transport bar (top, always visible)
    ============================================================ */
 
 function DragNum({ value, onChange, min, max, step=1, fmt, w=54, big }) {
@@ -60,6 +60,30 @@ function BpmControl({ value, onChange }) {
   );
 }
 
+function TransportButton({icon,on,onClick,color="var(--cyan)",glow,title}) {
+  return (
+    <button title={title} onClick={onClick} className="no-sel"
+      style={{width:38,height:38,borderRadius:"var(--r-2)",display:"grid",placeItems:"center",transition:"all .14s",
+        color: on?(color):"var(--tx-2)", background:on?`color-mix(in srgb,${color} 16%,transparent)`:"var(--bg-3)",
+        border:`1px solid ${on?color:"var(--line)"}`,
+        boxShadow: on&&glow?`0 0 16px ${color}55`:"var(--sh-1)"}}>
+      {React.cloneElement(I[icon],{style:{width:18,height:18}})}
+    </button>
+  );
+}
+
+function ToolButton({icon,label,onClick,title,disabled}) {
+  return (
+    <button title={title||label} onPointerDown={e=>e.stopPropagation()} onClick={onClick} disabled={disabled} className="no-sel"
+      style={{height:30,minWidth:30,padding:"0 8px",borderRadius:"var(--r-2)",display:"inline-flex",alignItems:"center",gap:6,
+        color:disabled?"var(--tx-4)":"var(--tx-2)",background:"var(--bg-3)",border:"1px solid var(--line)",
+        fontSize:11,fontWeight:700,boxShadow:"var(--sh-1)",position:"relative",zIndex:3,pointerEvents:"auto"}}>
+      {React.cloneElement(I[icon]||I.spark,{style:{width:14,height:14}})}
+      {label && <span style={{whiteSpace:"nowrap"}}>{label}</span>}
+    </button>
+  );
+}
+
 function Transport(p) {
   const beatsPerBar = p.sig[0];
   const bar = Math.floor(p.position / beatsPerBar) + 1;
@@ -70,45 +94,29 @@ function Transport(p) {
   const ss = String(Math.floor(secs%60)).padStart(2,"0");
   const ms = String(Math.floor((secs%1)*100)).padStart(2,"0");
 
-  const TBtn = ({icon,on,onClick,color="var(--cyan)",glow,title}) => (
-    <button title={title} onClick={onClick} className="no-sel"
-      style={{width:38,height:38,borderRadius:"var(--r-2)",display:"grid",placeItems:"center",transition:"all .14s",
-        color: on?(color):"var(--tx-2)", background:on?`color-mix(in srgb,${color} 16%,transparent)`:"var(--bg-3)",
-        border:`1px solid ${on?color:"var(--line)"}`,
-        boxShadow: on&&glow?`0 0 16px ${color}55`:"var(--sh-1)"}}>
-      {React.cloneElement(I[icon],{style:{width:18,height:18}})}
-    </button>
-  );
-
   return (
-    <header className="no-sel" style={{height:"var(--transport-h)",flex:"0 0 auto",display:"flex",alignItems:"center",
-      gap:14,padding:"0 14px",background:"linear-gradient(var(--bg-3),var(--bg-2))",borderBottom:"1px solid var(--line-2)",
+    <header className="no-sel" style={{height:"var(--transport-h)",flex:"0 0 auto",display:"flex",alignItems:"flex-start",
+      gap:14,padding:"8px 14px 0",background:"linear-gradient(var(--bg-3),var(--bg-2))",borderBottom:"1px solid var(--line-2)",
       position:"relative",zIndex:20}}>
 
       {/* logo + app menu */}
       <div style={{display:"flex",alignItems:"center",gap:9,paddingRight:6}}>
         <button className="iconbtn" onClick={(e)=>p.onAppMenu(e)} onContextMenu={(e)=>p.onAppMenu(e)} title="Project menu"
           style={{width:30,height:30}}>
-          <div style={{width:24,height:24,display:"grid",placeItems:"center",borderRadius:7,
-            background:"conic-gradient(from 210deg,var(--cyan),var(--purple),var(--emerald),var(--cyan))",
-            boxShadow:"0 0 16px var(--cyan-glow)"}}>
-            <div style={{width:8,height:8,background:"var(--bg-1)",borderRadius:2,transform:"rotate(45deg)"}}/>
-          </div>
+          <BrandMark size={24} className="brand-mark"/>
         </button>
-        <span style={{fontWeight:700,fontSize:14.5,letterSpacing:".14em"}}>THE DAW</span>
+        <span className="brand-word">Draftwave</span>
       </div>
 
       <div style={{width:1,height:30,background:"var(--line)"}}/>
 
       {/* transport */}
       <div style={{display:"flex",gap:7,alignItems:"center"}}>
-        <TBtn icon="play"  on={p.playing}   onClick={p.onPlay}  color="var(--emerald)" glow title="Play / Pause (Space)"/>
-        <TBtn icon="stop"  onClick={p.onStop} title="Stop"/>
-        <TBtn icon="rec"   on={p.recording} onClick={p.onRec}   color="var(--red)" glow title="Record"/>
-        <TBtn icon="loop"  on={p.loop.on}   onClick={p.onLoop}  title="Loop"/>
+        <TransportButton icon={p.playing?"pause":"play"}  on={p.playing}   onClick={p.onPlay}  color="var(--emerald)" glow title={p.playing?"Pause (Space)":"Play (Space)"}/>
+        <TransportButton icon="stop"  onClick={p.onStop} title="Stop"/>
+        <TransportButton icon="rec"   on={p.recording} onClick={p.onRec}   color="var(--red)" glow title="Record"/>
+        <TransportButton icon="loop"  on={p.loop.on}   onClick={p.onLoop}  title="Loop"/>
       </div>
-
-      <div style={{width:1,height:30,background:"var(--line)"}}/>
 
       {/* readouts */}
       <div style={{display:"flex",alignItems:"center",gap:14,padding:"5px 14px",borderRadius:"var(--r-2)",
@@ -175,8 +183,21 @@ function Transport(p) {
           {React.cloneElement(I.spark,{style:{width:15,height:15}})}Assistant
         </button>
       </div>
+
+      <div style={{position:"absolute",left:14,right:14,bottom:7,height:30,display:"flex",gap:6,alignItems:"center",
+        borderTop:"1px solid var(--line)",paddingTop:6}}>
+        <span className="faint" style={{fontSize:9,fontWeight:800,letterSpacing:".12em",marginRight:2}}>TOOLS</span>
+        <ToolButton icon="pointer" label="Select" onClick={p.onSelectTool}/>
+        <ToolButton icon="scissors" label="Split" onClick={p.onSplitClip} disabled={!p.hasClip}/>
+        <ToolButton icon="duplicate" label="Duplicate" onClick={p.onDuplicateClip} disabled={!p.hasClip}/>
+        <ToolButton icon="magnet" label="Quantize" onClick={p.onQuantizeClip} disabled={!p.hasMidiClip}/>
+        <ToolButton icon="dice" label="Humanize" onClick={p.onHumanizeClip} disabled={!p.hasMidiClip}/>
+        <ToolButton icon="wave" label="Import" onClick={p.onImportAudio}/>
+        <ToolButton icon="newfile" label="Export" onClick={p.onExportWav}/>
+        <ToolButton icon="fx" label="Settings" onClick={p.onSettings}/>
+      </div>
     </header>
   );
 }
 
-Object.assign(window, { Transport, DragNum });
+Object.assign(window, { Transport, DragNum, TransportButton, ToolButton });

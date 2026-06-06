@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — AI providers: bring-your-own engine
+   Draftwave — AI providers: bring-your-own engine
    Built-in Claude · Anthropic · OpenAI · xAI · Ollama (local)
    ============================================================ */
 
@@ -30,7 +30,7 @@ const LOCAL_LIBRARY = [
 ];
 
 const AI = (() => {
-  const KEY = "thedaw.ai.v1";
+  const KEY = "draftwave.ai.v1";
   const DEFAULTS = { provider:"builtin", keys:{anthropic:"",openai:"",xai:""},
     models:{anthropic:"claude-haiku-4-5",openai:"gpt-4o-mini",xai:"grok-3-mini",ollama:"llama3.2"},
     ollamaUrl:"http://localhost:11434" };
@@ -53,40 +53,52 @@ const AI = (() => {
   async function ask({ system, user }){
     const c = load(); const P = PROVIDERS[c.provider]; const max = 1024;
 
-    if(c.provider==="builtin"){
-      if(!window.claude || !window.claude.complete) throw new Error("Built-in unavailable");
-      return await window.claude.complete({ messages:[{ role:"user", content: system + "\n\nUser: " + user }] });
-    }
-
-    if(c.provider==="anthropic"){
-      const key=c.keys.anthropic; if(!key) throw new Error("Add your Anthropic API key in settings");
-      const r = await fetch(P.base+"/messages",{ method:"POST", headers:{
-        "content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01",
-        "anthropic-dangerous-direct-browser-access":"true" },
-        body: JSON.stringify({ model:c.models.anthropic, max_tokens:max, system, messages:[{role:"user",content:user}] }) });
-      if(!r.ok) throw new Error("Anthropic "+r.status+": "+(await r.text()).slice(0,120));
-      const j = await r.json(); return (j.content||[]).map(b=>b.text||"").join("");
-    }
-
-    if(c.provider==="openai" || c.provider==="xai"){
-      const key=c.keys[c.provider]; if(!key) throw new Error("Add your "+P.label+" API key in settings");
-      const r = await fetch(P.base+"/chat/completions",{ method:"POST", headers:{
-        "content-type":"application/json","authorization":"Bearer "+key },
-        body: JSON.stringify({ model:c.models[c.provider], max_tokens:max, temperature:0.7,
-          messages:[{role:"system",content:system},{role:"user",content:user}] }) });
-      if(!r.ok) throw new Error(P.label+" "+r.status+": "+(await r.text()).slice(0,120));
-      const j = await r.json(); return j.choices?.[0]?.message?.content || "";
-    }
-
-    if(c.provider==="ollama"){
-      const url=c.ollamaUrl.replace(/\/$/,"");
+    const askOllama = async () => {
+      const url=(c.ollamaUrl||DEFAULTS.ollamaUrl).replace(/\/$/,"");
       const r = await fetch(url+"/api/chat",{ method:"POST", headers:{"content-type":"application/json"},
-        body: JSON.stringify({ model:c.models.ollama, stream:false, options:{temperature:0.7},
+        body: JSON.stringify({ model:c.models.ollama||DEFAULTS.models.ollama, stream:false, options:{temperature:0.7},
           messages:[{role:"system",content:system},{role:"user",content:user}] }) });
-      if(!r.ok) throw new Error("Ollama "+r.status+" — is it running? ("+url+")");
+      if(!r.ok) throw new Error("Ollama "+r.status+" - is it running? ("+url+")");
       const j = await r.json(); return j.message?.content || "";
+    };
+
+    try {
+      if(c.provider==="builtin"){
+        if(!window.claude || !window.claude.complete) throw new Error("Built-in unavailable");
+        return await window.claude.complete({ messages:[{ role:"user", content: system + "\n\nUser: " + user }] });
+      }
+
+      if(c.provider==="anthropic"){
+        const key=c.keys.anthropic; if(!key) throw new Error("Add your Anthropic API key in settings");
+        const r = await fetch(P.base+"/messages",{ method:"POST", headers:{
+          "content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01",
+          "anthropic-dangerous-direct-browser-access":"true" },
+          body: JSON.stringify({ model:c.models.anthropic, max_tokens:max, system, messages:[{role:"user",content:user}] }) });
+        if(!r.ok) throw new Error("Anthropic "+r.status+": "+(await r.text()).slice(0,120));
+        const j = await r.json(); return (j.content||[]).map(b=>b.text||"").join("");
+      }
+
+      if(c.provider==="openai" || c.provider==="xai"){
+        const key=c.keys[c.provider]; if(!key) throw new Error("Add your "+P.label+" API key in settings");
+        const r = await fetch(P.base+"/chat/completions",{ method:"POST", headers:{
+          "content-type":"application/json","authorization":"Bearer "+key },
+          body: JSON.stringify({ model:c.models[c.provider], max_tokens:max, temperature:0.7,
+            messages:[{role:"system",content:system},{role:"user",content:user}] }) });
+        if(!r.ok) throw new Error(P.label+" "+r.status+": "+(await r.text()).slice(0,120));
+        const j = await r.json(); return j.choices?.[0]?.message?.content || "";
+      }
+
+      if(c.provider==="ollama") return await askOllama();
+      throw new Error("Unknown provider");
+    } catch(primaryError) {
+      if(c.provider!=="ollama"){
+        try { return await askOllama(); }
+        catch(fallbackError) {
+          throw new Error(`${String(primaryError.message||primaryError)}; Ollama fallback unavailable: ${String(fallbackError.message||fallbackError)}`);
+        }
+      }
+      throw primaryError;
     }
-    throw new Error("Unknown provider");
   }
 
   return { load, save, ask, listOllama, engineLabel };

@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW - Phase 2 audio, media, MIDI, and recording core
+   Draftwave - Phase 2 audio, media, MIDI, and recording core
    ============================================================ */
 
 export const AUDIO_FORMATS = ["wav", "mp3", "ogg", "flac", "webm"];

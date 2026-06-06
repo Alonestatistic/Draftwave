@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW - project schema, autosave, import/export helpers
+   Draftwave - project schema, autosave, import/export helpers
    ============================================================ */
 
 import {

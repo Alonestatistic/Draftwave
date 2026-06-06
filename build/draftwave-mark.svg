@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Draftwave mark</title>
+  <desc id="desc">A faceted dark diamond with a cyan and green wave path through the center.</desc>
+  <defs>
+    <linearGradient id="edge" x1="36" y1="26" x2="220" y2="230" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1fe3ff"/>
+      <stop offset=".52" stop-color="#9b6bff"/>
+      <stop offset="1" stop-color="#1fe39a"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="50" y1="116" x2="206" y2="142" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1fe3ff"/>
+      <stop offset=".58" stop-color="#6ee7ff"/>
+      <stop offset="1" stop-color="#1fe39a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#1fe3ff" stop-opacity=".28"/>
+      <stop offset=".55" stop-color="#9b6bff" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#05060a" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.12 0 0 0 0 0.89 0 0 0 0 1 0 0 0 .65 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+  </defs>
+  <rect width="256" height="256" rx="56" fill="#05060a"/>
+  <path d="M128 20 236 128 128 236 20 128 128 20Z" fill="url(#edge)"/>
+  <path d="M128 37 219 128 128 219 37 128 128 37Z" fill="#0a0c11"/>
+  <path d="M128 51 205 128 128 205 51 128 128 51Z" fill="#111720"/>
+  <path d="M128 51 205 128 128 205 51 128 128 51Z" fill="url(#glow)"/>
+  <path d="M58 138c24-34 48-34 72 0s48 34 72 0" fill="none" stroke="#071015" stroke-width="34" stroke-linecap="round"/>
+  <path d="M58 128c24-34 48-34 72 0s48 34 72 0" fill="none" stroke="url(#wave)" stroke-width="18" stroke-linecap="round" filter="url(#softGlow)"/>
+  <path d="M82 128c14-17 28-17 42 0" fill="none" stroke="#eaeef6" stroke-opacity=".74" stroke-width="5" stroke-linecap="round"/>
+  <path d="M147 128c14 17 28 17 42 0" fill="none" stroke="#eaeef6" stroke-opacity=".42" stroke-width="5" stroke-linecap="round"/>
+</svg>

@@ -1,10 +1,11 @@
 /* ============================================================
-   THE DAW — engine: icons, helpers, audio synth, seed data
+   Draftwave — engine: icons, helpers, audio synth, seed data
    ============================================================ */
 
 /* ---------- icons (functional UI glyphs, drawn minimally) ---------- */
 const I = {
   play:  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>,
+  pause: <svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="5" width="3.8" height="14" rx="1"/><rect x="13.2" y="5" width="3.8" height="14" rx="1"/></svg>,
   stop:  <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg>,
   rec:   <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>,
   loop:  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
@@ -43,6 +44,40 @@ const I = {
   zoomin:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8.5v5M8.5 11h5"/></svg>,
   zoomout:<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M8.5 11h5"/></svg>,
 };
+
+function BrandMark({ size=24, className="", style }) {
+  const s = typeof size === "number" ? `${size}px` : size;
+  return (
+    <svg className={className} style={{width:s,height:s,display:"block",...style}} viewBox="0 0 256 256" aria-label="Draftwave" role="img">
+      <defs>
+        <linearGradient id="dw-edge" x1="36" y1="26" x2="220" y2="230" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#1fe3ff"/>
+          <stop offset=".52" stopColor="#9b6bff"/>
+          <stop offset="1" stopColor="#1fe39a"/>
+        </linearGradient>
+        <linearGradient id="dw-wave" x1="50" y1="116" x2="206" y2="142" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#1fe3ff"/>
+          <stop offset=".58" stopColor="#6ee7ff"/>
+          <stop offset="1" stopColor="#1fe39a"/>
+        </linearGradient>
+        <radialGradient id="dw-glow" cx="50%" cy="42%" r="62%">
+          <stop offset="0" stopColor="#1fe3ff" stopOpacity=".28"/>
+          <stop offset=".55" stopColor="#9b6bff" stopOpacity=".12"/>
+          <stop offset="1" stopColor="#05060a" stopOpacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="256" height="256" rx="56" fill="#05060a"/>
+      <path d="M128 20 236 128 128 236 20 128 128 20Z" fill="url(#dw-edge)"/>
+      <path d="M128 37 219 128 128 219 37 128 128 37Z" fill="#0a0c11"/>
+      <path d="M128 51 205 128 128 205 51 128 128 51Z" fill="#111720"/>
+      <path d="M128 51 205 128 128 205 51 128 128 51Z" fill="url(#dw-glow)"/>
+      <path d="M58 138c24-34 48-34 72 0s48 34 72 0" fill="none" stroke="#071015" strokeWidth="34" strokeLinecap="round"/>
+      <path d="M58 128c24-34 48-34 72 0s48 34 72 0" fill="none" stroke="url(#dw-wave)" strokeWidth="18" strokeLinecap="round"/>
+      <path d="M82 128c14-17 28-17 42 0" fill="none" stroke="#eaeef6" strokeOpacity=".74" strokeWidth="5" strokeLinecap="round"/>
+      <path d="M147 128c14 17 28 17 42 0" fill="none" stroke="#eaeef6" strokeOpacity=".42" strokeWidth="5" strokeLinecap="round"/>
+    </svg>
+  );
+}
 
 /* ---------- music helpers ---------- */
 const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
@@ -155,12 +190,16 @@ const Audio = (() => {
     if (!buffer) return;
     if (!ready) ensure();
     const t = ctx.currentTime + when;
+    const rawOffset = Number(offset || 0);
+    if (!Number.isFinite(rawOffset) || rawOffset >= buffer.duration) return;
+    const startOffset = clamp(rawOffset, 0, Math.max(0, buffer.duration - 0.001));
     const src = ctx.createBufferSource();
     const out = ctx.createGain();
     const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
     src.buffer = opts.reverse ? reverseBuffer(buffer) : buffer;
     src.playbackRate.value = opts.playbackRate || 1;
-    const totalDur = dur || Math.max(0.01, buffer.duration-(offset||0));
+    const remaining = Math.max(0.01, buffer.duration - startOffset);
+    const totalDur = Math.min(dur || remaining, remaining);
     const baseGain = 0.8 * gainScale * (opts.gain || 1);
     out.gain.setValueAtTime(0, t);
     out.gain.linearRampToValueAtTime(baseGain, t + Math.min(opts.fadeIn||0.005, totalDur/2));
@@ -168,7 +207,7 @@ const Audio = (() => {
     out.gain.linearRampToValueAtTime(0.0001, t + totalDur);
     if (pan){ pan.pan.value = panV; src.connect(out); out.connect(pan); pan.connect(master); }
     else { src.connect(out); out.connect(master); }
-    src.start(t, Math.max(0, offset||0), totalDur);
+    src.start(t, startOffset, totalDur);
   }
 
   function reverseBuffer(buffer) {
@@ -251,5 +290,5 @@ const BROWSER_TREE = [
     {name:"Ping Delay", kind:"fx", tag:"Delay"},{name:"Bus Compressor", kind:"fx", tag:"Dynamics"} ]},
 ];
 
-Object.assign(window, { I, Audio, SEED, TRACK_KINDS, BROWSER_TREE, BROWSER_TREE_:BROWSER_TREE,
+Object.assign(window, { I, BrandMark, Audio, SEED, TRACK_KINDS, BROWSER_TREE, BROWSER_TREE_:BROWSER_TREE,
   NOTE_NAMES, isBlack, noteName, midiToFreq, SCALES, ROOTS, inScale, clamp, uid, chord });

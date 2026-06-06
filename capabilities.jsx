@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW - capability registry and native feature scaffolding
+   Draftwave - capability registry and native feature scaffolding
    ============================================================ */
 
 export const CAPABILITY_STATUS = {

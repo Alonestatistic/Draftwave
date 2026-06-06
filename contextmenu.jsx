@@ -1,5 +1,5 @@
 /* ============================================================
-   THE DAW — global right-click context menu
+   Draftwave — global right-click context menu
    openMenu(event, items)  ·  <ContextMenuHost/> at app root
    item: { label, icon, shortcut, danger, disabled, checked, onClick }
          { sep:true }  ·  { header:"TEXT" }
@@ -16,12 +16,35 @@ function ContextMenuHost(){
     const open=(e)=>setMenu(e.detail);
     const close=()=>setMenu(null);
     const key=(e)=>{ if(e.key==="Escape") setMenu(null); };
+    const fallback=(e)=>{
+      if(e.defaultPrevented) return;
+      const target = e.target;
+      const control = target?.closest?.("button,[role='button'],input,textarea");
+      if(control?.closest?.(".ctx-pop")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if(control){
+        const label = (control.getAttribute("title") || control.getAttribute("aria-label") || control.textContent || control.value || "Control").trim();
+        setMenu({ x:e.clientX, y:e.clientY, items:[
+          { header:label || "Control" },
+          { label:"Activate", icon:"pointer", disabled:control.disabled, onClick:()=>control.click() },
+          { label:"Focus", icon:"selectall", disabled:typeof control.focus!=="function", onClick:()=>control.focus() },
+        ] });
+      } else {
+        setMenu({ x:e.clientX, y:e.clientY, items:[
+          { header:"Draftwave" },
+          { label:"Project Menu", icon:"newfile", onClick:()=>window.dispatchEvent(new CustomEvent("daw:appmenu",{ detail:{ x:e.clientX, y:e.clientY } })) },
+          { label:"Close Menu", icon:"close" },
+        ] });
+      }
+    };
     window.addEventListener("daw:ctx",open);
+    window.addEventListener("contextmenu",fallback);
     window.addEventListener("blur",close);
     window.addEventListener("resize",close);
     window.addEventListener("keydown",key,true);
     return ()=>{ window.removeEventListener("daw:ctx",open); window.removeEventListener("blur",close);
-      window.removeEventListener("resize",close); window.removeEventListener("keydown",key,true); };
+      window.removeEventListener("contextmenu",fallback); window.removeEventListener("resize",close); window.removeEventListener("keydown",key,true); };
   },[]);
   if(!menu) return null;
   const W=224;

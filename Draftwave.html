@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Draftwave</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div id="root"></div>
+
+<div id="boot" style="position:fixed;inset:0;background:#05060a;display:grid;place-items:center;z-index:99999;transition:opacity .4s">
+  <div style="text-align:center">
+    <svg style="width:58px;height:58px;margin:0 auto 16px;display:block;filter:drop-shadow(0 0 22px rgba(31,227,255,.36));animation:popIn .5s ease" viewBox="0 0 256 256" aria-label="Draftwave">
+      <defs>
+        <linearGradient id="bootEdge" x1="36" y1="26" x2="220" y2="230" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1fe3ff"/><stop offset=".52" stop-color="#9b6bff"/><stop offset="1" stop-color="#1fe39a"/></linearGradient>
+        <linearGradient id="bootWave" x1="50" y1="116" x2="206" y2="142" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1fe3ff"/><stop offset=".58" stop-color="#6ee7ff"/><stop offset="1" stop-color="#1fe39a"/></linearGradient>
+      </defs>
+      <rect width="256" height="256" rx="56" fill="#05060a"/><path d="M128 20 236 128 128 236 20 128 128 20Z" fill="url(#bootEdge)"/><path d="M128 37 219 128 128 219 37 128 128 37Z" fill="#0a0c11"/><path d="M128 51 205 128 128 205 51 128 128 51Z" fill="#111720"/><path d="M58 138c24-34 48-34 72 0s48 34 72 0" fill="none" stroke="#071015" stroke-width="34" stroke-linecap="round"/><path d="M58 128c24-34 48-34 72 0s48 34 72 0" fill="none" stroke="url(#bootWave)" stroke-width="18" stroke-linecap="round"/><path d="M82 128c14-17 28-17 42 0" fill="none" stroke="#eaeef6" stroke-opacity=".74" stroke-width="5" stroke-linecap="round"/><path d="M147 128c14 17 28 17 42 0" fill="none" stroke="#eaeef6" stroke-opacity=".42" stroke-width="5" stroke-linecap="round"/>
+    </svg>
+    <div style="font-family:'Space Grotesk',sans-serif;letter-spacing:.18em;font-size:13px;font-weight:700;color:#eaeef6;text-transform:uppercase">Draftwave</div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.jsx"></script>
+
+<script>
+  // hide boot splash once React paints
+  const obs = setInterval(()=>{ if(document.querySelector('#root header')){ const b=document.getElementById('boot');
+    b.style.opacity=0; setTimeout(()=>b.remove(),420); clearInterval(obs); } }, 80);
+  setTimeout(()=>{ const b=document.getElementById('boot'); if(b){b.style.opacity=0;setTimeout(()=>b&&b.remove(),420);} }, 5000);
+</script>
+
+<style id="__om-edit-overrides"></style>
+</body>
+</html>

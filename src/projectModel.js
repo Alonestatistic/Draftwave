@@ -1,6 +1,6 @@
 export const PROJECT_VERSION = 2;
-export const PROJECT_AUTOSAVE_KEY = "thedaw.autosave.v1";
-export const PROJECT_SETTINGS_KEY = "thedaw.settings.v1";
+export const PROJECT_AUTOSAVE_KEY = "draftwave.autosave.v1";
+export const PROJECT_SETTINGS_KEY = "draftwave.settings.v1";
 export const MEDIA_EMBED_WARN_BYTES = 25 * 1024 * 1024;
 
 export const cloneData = (value) => JSON.parse(JSON.stringify(value));
@@ -39,6 +39,9 @@ export const DEFAULT_DAW_SETTINGS = {
   keybinds: {
     transport: "Space",
     save: "Ctrl+S",
+    saveAs: "Ctrl+Shift+S",
+    open: "Ctrl+O",
+    newProject: "Ctrl+N",
     undo: "Ctrl+Z",
     redo: "Ctrl+Shift+Z",
     split: "S",
@@ -147,7 +150,7 @@ export function serializeProjectState(state) {
   return {
     version: PROJECT_VERSION,
     savedAt: new Date().toISOString(),
-    app: "The DAW",
+    app: "Draftwave",
     transport: {
       bpm: state.bpm,
       sig: state.sig || [4, 4],
