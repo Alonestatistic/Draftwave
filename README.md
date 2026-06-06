@@ -29,6 +29,10 @@ npm run package:win
 
 The Windows installer is copied to the project root during local release prep as `draftwave-0.1.0-win-x64.exe`. Generated installers and build output are intentionally ignored by Git.
 
+## Private Alpha Testing
+
+Tester handoff instructions live in [docs/TESTER_INSTRUCTIONS.md](docs/TESTER_INSTRUCTIONS.md). Internal stop-ship coverage lives in [docs/PRIVATE_ALPHA_TEST_PLAN.md](docs/PRIVATE_ALPHA_TEST_PLAN.md).
+
 ## Status
 
 Private alpha, Windows first. Not licensed for public reuse yet.

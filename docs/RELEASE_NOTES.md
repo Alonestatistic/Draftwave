@@ -12,6 +12,7 @@
 ### Alpha 4 Tester Readiness Pass
 
 - Tester handoff now includes `docs/PRIVATE_ALPHA_TEST_PLAN.md` and a dedicated `Export Tester Feedback...` report.
+- Tester-facing instructions now live in `docs/TESTER_INSTRUCTIONS.md`.
 - Alpha 4 feedback reports include workflow placeholders, capability statuses, media warnings, recent errors, and a data-loss stop-ship evaluation.
 - `npm run alpha4:stopship` checks release docs and stop-ship coverage before a tester build is handed off.
 - The release channel remains private alpha; any stop-ship flag blocks broader rollout until triaged.
