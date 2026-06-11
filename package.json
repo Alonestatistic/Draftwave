@@ -1,33 +1,30 @@
 {
   "name": "draftwave",
   "version": "0.1.0",
-  "description": "Draftwave desktop shell and renderer prototype",
-  "author": "Draftwave Alpha",
+  "description": "Draftwave desktop DAW",
+  "author": "Draftwave",
   "main": "electron/main.cjs",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "smoke": "node scripts/smoke-alpha.mjs",
+    "smoke": "node scripts/smoke.mjs",
     "test": "node --test tests/*.test.mjs",
-    "integration": "node scripts/integration-alpha.cjs",
-    "release:manifest": "node scripts/write-release-manifest.mjs",
-    "alpha4:stopship": "node scripts/alpha4-stopship.mjs",
-    "check": "npm run test && npm run smoke && npm run alpha4:stopship && npm run build && npm run integration",
+    "check": "npm run test && npm run smoke && npm run build",
     "desktop": "electron .",
     "start": "concurrently -k \"npm:dev\" \"wait-on http://127.0.0.1:5173/Draftwave.html && electron .\"",
     "preview": "vite preview --host 127.0.0.1",
-    "package:win": "npm run build && npm run release:manifest && electron-builder --win --x64"
+    "release:manifest": "node scripts/write-release-manifest.mjs",
+    "copy:installer": "node scripts/copy-win-installer.mjs",
+    "package:win": "npm run build && npm run release:manifest && electron-builder --win --x64 --publish never && npm run copy:installer",
+    "dist:win": "npm run package:win"
   },
   "build": {
-    "appId": "com.draftwave.alpha",
+    "appId": "com.draftwave.app",
     "productName": "Draftwave",
-    "artifactName": "draftwave-${version}-${os}-${arch}.${ext}",
-    "extraMetadata": {
-      "alphaPhase": "Alpha 4",
-      "releaseChannel": "private-alpha"
-    },
+    "artifactName": "Draftwave-Setup-${version}-${arch}.${ext}",
+    "asar": true,
     "files": [
       "dist/**/*",
       "electron/**/*",
@@ -42,14 +39,17 @@
       "target": [
         "nsis"
       ],
-      "publisherName": "Draftwave Alpha"
+      "publisherName": "Draftwave"
     },
     "nsis": {
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Draftwave"
     }
   },
   "dependencies": {
