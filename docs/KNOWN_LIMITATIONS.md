@@ -1,38 +1,31 @@
-# Draftwave Private Alpha Known Limitations
+# Draftwave Known Limitations
 
-This Private Alpha is a Windows-first creative sketch DAW. It is intended for composition, arrangement, quick MIDI ideas, simple audio clips, basic recording where available, save/load, autosave recovery, and WAV export.
+Draftwave is a Windows-first creative sketch DAW for quickly building musical ideas. The active app scope is composition, arrangement, audio import, simple recording where supported, save/load, autosave recovery, and WAV mixdown export.
 
-## Stable Alpha Promise
+## Current Working Scope
 
-- Create a project, add and edit MIDI clips, arrange tracks, save/load, and export a WAV mixdown.
-- Import common audio files and keep imported media embedded in the project JSON for alpha reliability.
-- Record microphone takes when the runtime grants access to MediaRecorder.
-- Use undo/redo for the main edit operations in the current sketch workflow.
-- See capability labels that distinguish Available, Experimental, Needs backend, and Unsupported features.
+- Create audio, MIDI, drum, bass, pad, lead, key, sampler, and drum-rack tracks.
+- Edit clips in the arrangement and piano roll.
+- Import WAV, MP3, OGG, FLAC, and WEBM audio when the Electron/browser runtime can decode the file.
+- Save and load Draftwave project JSON files with embedded media.
+- Restore or discard autosave snapshots on launch.
+- Export a WAV mixdown.
+- Use the Assistant Producer for musical actions and idea generation.
+- Use Ollama model pulls when Ollama is installed locally.
 
-## Experimental
+## Known Limitations
 
-- Microphone recording depends on the Electron/browser runtime, device permission, and codec support.
-- MIDI input uses Web MIDI when exposed by the runtime.
-- Controller lanes, pitch bend, and aftertouch are persisted as clip project data but are not fully routed through every playback/render path.
-- Sampler and drum rack track types are present, but sample-slot and pad assignment workflows are still early.
-- Built-in mixer effects are currently project-data controls unless explicitly audible in the synth/render path.
-- Detachable panels open through Electron, but focused routing and multi-window state are still evolving.
-- Stem export currently writes a manifest, not separate rendered stem audio files.
-- Extension discovery is scaffolded and intended for internal experiments.
+- Microphone recording depends on runtime permission, input device availability, and codec support.
+- MIDI input depends on Web MIDI support in the packaged runtime and the connected device.
+- Controller lanes, pitch bend, and aftertouch are saved as project data, but they are not fully routed through every playback and render path yet.
+- Sampler and drum-rack creation exists, but deep sample-zone and pad-assignment workflows are still early.
+- Mixer effect chains are editable project data; only effects explicitly wired into the synth/render path are audible.
+- The Windows installer is unsigned unless a signing certificate is added to the release environment, so Windows SmartScreen may warn on first launch.
 
-## Not Promised For Alpha
+## Removed From The Active App Surface
 
-- True VST hosting.
-- Commercial-grade plugin sandboxing.
-- Professional low-latency native audio engine.
-- Full stem splitting.
-- Automatic mastering/remastering.
-- SoundFont production support.
-- Paid or public distribution.
+Prototype-only native plugin hosting, SoundFont production support, AI remastering, stem splitting, extension scanning, tester stop-ship reports, and alpha-only integration harnesses are not part of the functional DAW surface. They should stay out of menus and release checks until they have real implementations.
 
-## Tester Guidance
+## User Guidance
 
-Do not use Private Alpha builds for irreplaceable sessions. Keep backups of exported project files and report any data-loss, save/load, audio-device, import, recording, or export failure immediately with the app's Report Issue action.
-
-Before ending an Alpha 4 test session, use `Export Tester Feedback...` so the build can be checked against the known limitations and data-loss stop-ship rules.
+Keep backup copies of source audio and exported projects. Report any save/load, autosave, media persistence, recording, import, or WAV export failure with the app's **Report Issue...** action.
