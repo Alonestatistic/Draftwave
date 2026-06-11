@@ -8,13 +8,13 @@ const file = (path) => join(root, path);
 const pkg = JSON.parse(await readFile(file("package.json"), "utf8"));
 const releaseNotes = await readFile(file("docs/RELEASE_NOTES.md"), "utf8");
 const knownLimitations = await readFile(file("docs/KNOWN_LIMITATIONS.md"), "utf8");
-const testPlan = await readFile(file("docs/PRIVATE_ALPHA_TEST_PLAN.md"), "utf8");
+
+const installerName = `Draftwave-Setup-${pkg.version}-x64.exe`;
 
 const manifest = {
   app: "Draftwave",
   version: pkg.version,
-  alphaPhase: pkg.build?.extraMetadata?.alphaPhase || "Alpha 3",
-  channel: pkg.build?.extraMetadata?.releaseChannel || "private-alpha",
+  channel: "desktop",
   createdAt: new Date().toISOString(),
   package: {
     appId: pkg.build?.appId,
@@ -22,16 +22,16 @@ const manifest = {
     artifactName: pkg.build?.artifactName,
     target: pkg.build?.win?.target || [],
     publisherName: pkg.build?.win?.publisherName || null,
+    installer: `release/${installerName}`,
   },
   docs: {
     releaseNotes: "docs/RELEASE_NOTES.md",
     knownLimitations: "docs/KNOWN_LIMITATIONS.md",
-    privateAlphaTestPlan: "docs/PRIVATE_ALPHA_TEST_PLAN.md",
+    releaseChecklist: "docs/RELEASE_CHECKLIST.md",
   },
   summary: {
     releaseNotesLines: releaseNotes.split(/\r?\n/).filter(Boolean).length,
     knownLimitationsLines: knownLimitations.split(/\r?\n/).filter(Boolean).length,
-    testPlanLines: testPlan.split(/\r?\n/).filter(Boolean).length,
   },
 };
 
