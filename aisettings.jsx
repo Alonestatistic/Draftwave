@@ -133,7 +133,7 @@ function AISettingsModal({ onClose, onSaved, embedded=false }) {
   const inputStyle = {
     width:"100%",
     height:38,
-    background:"var(--bg-1)",
+    background:"var(--metal), var(--bg-1)",
     border:"1px solid var(--line-2)",
     borderRadius:"var(--r-2)",
     color:"var(--tx)",
@@ -141,6 +141,7 @@ function AISettingsModal({ onClose, onSaved, embedded=false }) {
     padding:"0 12px",
     outline:"none",
     fontFamily:"var(--mono)",
+    boxShadow:"inset 0 1px 4px rgba(0,0,0,.3)",
   };
 
   const Chip = ({ on, onClick, children, accent }) => (
@@ -151,9 +152,10 @@ function AISettingsModal({ onClose, onSaved, embedded=false }) {
       fontWeight:600,
       fontFamily:"var(--mono)",
       transition:"all .12s",
-      background:on ? `color-mix(in srgb,${accent} 18%,var(--bg-3))` : "var(--bg-3)",
+      background:on ? `color-mix(in srgb,${accent} 18%,var(--bg-3))` : "var(--metal), var(--bg-3)",
       color:on ? accent : "var(--tx-2)",
       border:`1px solid ${on ? accent : "var(--line)"}`,
+      boxShadow:on ? `0 0 12px color-mix(in srgb,${accent} 20%,transparent)` : "var(--sh-control)",
     }}>{children}</button>
   );
 
@@ -203,8 +205,8 @@ function AISettingsModal({ onClose, onSaved, embedded=false }) {
 
   return (
     <div className="modal-backdrop" style={shellStyle} onMouseDown={e => { if (!embedded && e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={modalStyle}>
-        <div style={{padding:embedded ? "12px 14px" : "16px 20px",borderBottom:"1px solid var(--line)",display:"flex",alignItems:"center",gap:12}}>
+      <div className="modal settings-panel" style={modalStyle}>
+        <div style={{padding:embedded ? "12px 14px" : "16px 20px",borderBottom:"1px solid var(--line)",display:"flex",alignItems:"center",gap:12,background:"var(--metal), var(--bg-2)"}}>
           <div style={{width:32,height:32,borderRadius:9,display:"grid",placeItems:"center",
             background:"conic-gradient(from 140deg,var(--cyan),var(--purple),var(--emerald),var(--cyan))",boxShadow:"0 0 16px var(--cyan-glow)"}}>
             {React.cloneElement(I.spark,{style:{width:16,height:16,color:"#04121a"}})}
@@ -311,7 +313,7 @@ function AISettingsModal({ onClose, onSaved, embedded=false }) {
                       const done = pull?.model === m.id && pull.done && !pull.error;
                       const failed = pull?.model === m.id && pull.error;
                       return (
-                        <div key={m.id} style={downloadRowStyle}>
+                        <div className="hardware-control" key={m.id} style={downloadRowStyle}>
                           <div style={{gridColumn:embedded ? "1 / -1" : "auto",flex:1,minWidth:0}}>
                             <div style={{fontSize:12.5,fontWeight:600}}>{m.name}
                               <span className="faint" style={{fontWeight:400,marginLeft:7,fontSize:11}}>{m.by} - {m.params} - {m.size}</span></div>
@@ -347,8 +349,9 @@ function AISettingsModal({ onClose, onSaved, embedded=false }) {
           </div>
         </div>
 
-        <div style={{padding:embedded ? "10px 12px" : "13px 20px",borderTop:"1px solid var(--line)",display:"flex",alignItems:"center",gap:10,flexWrap:embedded ? "wrap" : "nowrap"}}>
+        <div style={{padding:embedded ? "10px 12px" : "13px 20px",borderTop:"1px solid var(--line)",display:"flex",alignItems:"center",gap:10,flexWrap:embedded ? "wrap" : "nowrap",background:"rgba(0,0,0,.10)"}}>
           <button onClick={runTest} disabled={test === "run"}
+            className="hardware-control"
             style={{display:"flex",alignItems:"center",gap:8,height:38,padding:"0 16px",borderRadius:"var(--r-2)",fontSize:12.5,fontWeight:600,
               background:"var(--bg-4)",border:"1px solid var(--line-2)",color:"var(--tx)"}}>
             {test === "run" ? <><span className="spin" style={{width:13,height:13,border:"2px solid var(--tx-3)",borderTopColor:"var(--cyan)",

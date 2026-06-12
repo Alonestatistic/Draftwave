@@ -44,8 +44,8 @@ function SettingsModal({ settings, onChange, onClose }) {
       {hint && <span className="faint" style={{fontSize:11,lineHeight:1.45}}>{hint}</span>}
     </label>
   );
-  const input = {height:36,background:"var(--bg-1)",border:"1px solid var(--line-2)",borderRadius:8,
-    color:"var(--tx)",padding:"0 10px",outline:"none",fontFamily:"var(--ui)",fontSize:12.5};
+  const input = {height:36,background:"var(--metal), var(--bg-1)",border:"1px solid var(--line-2)",borderRadius:8,
+    color:"var(--tx)",padding:"0 10px",outline:"none",fontFamily:"var(--ui)",fontSize:12.5,boxShadow:"inset 0 1px 4px rgba(0,0,0,.3)"};
   const select = (value, onChange, options) => (
     <div style={{position:"relative"}}>
       <button type="button" onClick={(e)=>{ e.stopPropagation(); const r=e.currentTarget.getBoundingClientRect();
@@ -105,7 +105,7 @@ function SettingsModal({ settings, onChange, onClose }) {
   return (
     <div onPointerDown={()=>{ setMenu(null); onClose(); }} style={{position:"fixed",inset:0,zIndex:1200,display:"grid",placeItems:"center",
       background:"rgba(3,4,8,.68)",backdropFilter:"blur(9px)",animation:"popIn .16s ease"}}>
-      <div onPointerDown={e=>e.stopPropagation()} style={{width:modalW,height:modalH,display:"flex",
+      <div className="settings-panel" onPointerDown={e=>e.stopPropagation()} style={{width:modalW,height:modalH,display:"flex",
         background:"var(--bg-2)",border:"1px solid var(--line-3)",borderRadius:"var(--r-4)",boxShadow:"var(--sh-pop)",overflow:"hidden"}}>
         <aside style={{width:210,background:"var(--bg-1)",borderRight:"1px solid var(--line)",padding:10,overflowY:"auto"}}>
           <div style={{fontSize:11,fontWeight:800,letterSpacing:".16em",color:"var(--tx-2)",padding:"8px 8px 12px"}}>SETTINGS</div>
@@ -113,7 +113,8 @@ function SettingsModal({ settings, onChange, onClose }) {
             <button key={t.id} onClick={()=>setTab(t.id)}
               style={{width:"100%",height:34,display:"flex",alignItems:"center",padding:"0 10px",borderRadius:8,
                 marginBottom:4,fontSize:12.5,fontWeight:700,textAlign:"left",
-                color:tab===t.id?"#04121a":"var(--tx-2)",background:tab===t.id?"var(--cyan)":"transparent"}}>
+                color:tab===t.id?"#04121a":"var(--tx-2)",background:tab===t.id?"var(--cyan)":"transparent",
+                boxShadow:tab===t.id?"0 0 14px var(--cyan-glow)":"none"}}>
               {t.label}
             </button>
           ))}
@@ -128,7 +129,7 @@ function SettingsModal({ settings, onChange, onClose }) {
             <button className="iconbtn" onClick={onClose}>{I.close}</button>
           </header>
           <div style={{flex:1,overflowY:"auto",padding:20}}>{pane[tab]}</div>
-          <footer style={{height:58,display:"flex",alignItems:"center",gap:10,padding:"0 18px",borderTop:"1px solid var(--line)"}}>
+          <footer style={{height:58,display:"flex",alignItems:"center",gap:10,padding:"0 18px",borderTop:"1px solid var(--line)",background:"rgba(0,0,0,.10)"}}>
             {notice && <span style={{fontSize:12,color:"var(--amber)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{notice}</span>}
             <span style={{flex:1}}/>
             <button onClick={onClose} style={{height:36,padding:"0 16px",borderRadius:8,color:"var(--tx-2)",fontWeight:700}}>Cancel</button>
@@ -154,7 +155,7 @@ function SettingsModal({ settings, onChange, onClose }) {
 function Panel({ title, children }) {
   return (
     <div>
-      <h2 style={{margin:"0 0 16px",fontSize:20,letterSpacing:"-.02em"}}>{title}</h2>
+      <h2 style={{margin:"0 0 16px",fontSize:20,letterSpacing:0}}>{title}</h2>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:"4px 18px"}}>{children}</div>
     </div>
   );

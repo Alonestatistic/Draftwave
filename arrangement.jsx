@@ -15,9 +15,9 @@ function clipInner(clip, kind, color, h, mediaById) {
     const beats = clip.len * 4;
     return clip.notes.map(n=>{
       const top = (1-(n.p-lo)/span)*(h-10)+3;
-      return <div key={n.id||n.p+"_"+n.s} style={{position:"absolute",height:2.5,borderRadius:2,
-        left:`${(n.s/beats)*100}%`, width:`${(n.l/beats)*100}%`, top, background:color, opacity:n.muted?.3:.92,
-        boxShadow:`0 0 4px ${color}`}}/>;
+      return <div key={n.id||n.p+"_"+n.s} style={{position:"absolute",height:3,borderRadius:3,
+        left:`${(n.s/beats)*100}%`, width:`${(n.l/beats)*100}%`, top, background:color, opacity:n.muted ? .3 : .92,
+        boxShadow:`0 0 8px color-mix(in srgb,${color} 52%,transparent)`}}/>;
     });
   }
   const waveform = clip.audio && clip.mediaId ? mediaById?.get(clip.mediaId)?.waveform : null;
@@ -29,18 +29,18 @@ function clipInner(clip, kind, color, h, mediaById) {
         const hot = v > .72;
         return <div key={i} style={{flex:"1 1 0",minWidth:1,height:`${amp}%`,borderRadius:2,
           background:`linear-gradient(180deg,color-mix(in srgb,${color} 88%,#fff 12%),${color})`,
-          opacity:hot?.95:.74,boxShadow:hot?`0 0 8px color-mix(in srgb,${color} 72%,transparent)`:"none"}}/>;
+          opacity:hot ? .95 : .74,boxShadow:hot?`0 0 8px color-mix(in srgb,${color} 72%,transparent)`:"none"}}/>;
       })}
     </div>;
   }
   if (kind==="drum") {
     const cells = clip.len*4*2;
-    return <div style={{position:"absolute",inset:"6px 4px",display:"grid",
+    return <div style={{position:"absolute",inset:"6px 5px",display:"grid",
       gridTemplateColumns:`repeat(${cells},1fr)`,gridTemplateRows:"repeat(3,1fr)",gap:1.5,alignItems:"center"}}>
       {Array.from({length:cells*3}).map((_,i)=>{ const row=Math.floor(i/cells), col=i%cells;
         const on = (row===0&&col%8===0)||(row===1&&col%8===4)||(row===2&&col%2===0);
-        return <div key={i} style={{height:on?"100%":2,borderRadius:1,
-          background:on?color:"var(--line)",opacity:on?.85:1,boxShadow:on?`0 0 3px ${color}`:"none"}}/>; })}
+        return <div key={i} style={{height:on?"100%":2,borderRadius:on?2:1,
+          background:on?`linear-gradient(180deg,color-mix(in srgb,${color} 82%,#fff 12%),${color})`:"var(--line)",opacity:.9,boxShadow:on?`0 0 7px color-mix(in srgb,${color} 48%,transparent)`:"none"}}/>; })}
     </div>;
   }
   const bars=Math.floor(clip.len*14); let seed=clip.id?clip.id.charCodeAt(0):7;
@@ -161,10 +161,10 @@ function Arrangement(p) {
   return (
     <div className="no-sel" style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,background:"var(--bg-1)",overflow:"hidden"}}>
       {/* ruler */}
-      <div style={{display:"flex",height:"var(--ruler-h)",flex:"0 0 auto",borderBottom:"1px solid var(--line-2)",background:"var(--bg-2)"}}>
+      <div className="hardware-panel" style={{display:"flex",height:"var(--ruler-h)",flex:"0 0 auto",borderBottom:"1px solid var(--line-2)",background:"var(--bg-2)"}}>
         <div style={{width:220,flex:"0 0 auto",borderRight:"1px solid var(--line-2)",display:"flex",alignItems:"center",
           padding:"0 10px 0 12px",gap:6}}>
-          <span style={{fontSize:10,fontWeight:700,letterSpacing:".14em",color:"var(--tx-3)"}}>ARRANGEMENT</span>
+          <span className="section-kicker">ARRANGEMENT</span>
           <span style={{flex:1}}/>
           <button className="iconbtn" style={{width:22,height:22}} title="Zoom out timeline"
             onClick={()=>p.setZoom(z=>clamp(z-16,28,220))}>{React.cloneElement(I.zoomout,{style:{width:13,height:13}})}</button>
@@ -177,7 +177,7 @@ function Arrangement(p) {
             style={{position:"relative",width:tlW,height:"100%",cursor:"text"}}>
             {Array.from({length:timelineBars}).map((_,i)=>(
               <div key={i} style={{position:"absolute",left:i*pxPerBar,top:0,bottom:0,paddingLeft:6,
-                borderLeft:`1px solid ${i%4===0?"var(--line-3)":"var(--line)"}`,display:"flex",alignItems:"center"}}>
+                borderLeft:`1px solid ${i%4===0?"var(--line-3)":"var(--line-soft)"}`,display:"flex",alignItems:"center"}}>
                 <span className="mono" style={{fontSize:10,color:i%4===0?"var(--tx-2)":"var(--tx-4)",fontWeight:i%4===0?600:400}}>{i+1}</span>
               </div>
             ))}
@@ -190,7 +190,7 @@ function Arrangement(p) {
             </div>}
             <div style={{position:"absolute",top:0,left:position/beatsPerBar*pxPerBar,transform:"translateX(-50%)"}}>
               <div style={{width:0,height:0,borderLeft:"6px solid transparent",borderRight:"6px solid transparent",
-                borderTop:"8px solid var(--cyan)",filter:"drop-shadow(0 0 4px var(--cyan))"}}/>
+                borderTop:"8px solid var(--cyan)",filter:"drop-shadow(0 0 6px var(--cyan))"}}/>
             </div>
           </div>
         </div>
@@ -198,7 +198,7 @@ function Arrangement(p) {
 
       {/* body */}
       <div style={{display:"flex",flex:1,minHeight:0}}>
-        <div ref={headRef} style={{width:220,flex:"0 0 auto",overflow:"hidden",borderRight:"1px solid var(--line-2)",background:"var(--bg-2)"}}>
+        <div ref={headRef} className="hardware-panel" style={{width:220,flex:"0 0 auto",overflow:"hidden",borderRight:"1px solid var(--line-2)",background:"var(--bg-2)"}}>
           {tracks.map((t,i)=>(<TrackHead key={t.id} t={t} idx={i} HH={HH} {...p}/>))}
           <button onClick={p.addTrack} className="no-sel no-press"
             style={{display:"flex",alignItems:"center",gap:9,width:"100%",height:46,padding:"0 14px",color:"var(--tx-2)",
@@ -214,7 +214,7 @@ function Arrangement(p) {
         </div>
 
         <div ref={bodyRef} onScroll={onScroll} onWheel={onWheel}
-          className={`arrangement-scroll ${dropHover?"drop-hover":""}`}
+          className={`arrangement-scroll ${dropHover?"drop-hover lane-drop-glow":""}`}
           onDragOver={(e)=>{e.preventDefault();setDropHover(true);}}
           onDragLeave={()=>setDropHover(false)}
           onDrop={(e)=>{ e.preventDefault(); setDropHover(false);
@@ -230,7 +230,7 @@ function Arrangement(p) {
           style={{flex:1,overflow:"auto",position:"relative",background: dropHover?"color-mix(in srgb,var(--cyan) 5%,var(--bg-1))":"var(--bg-1)",transition:"background .15s"}}>
           <div style={{position:"relative",width:tlW,minHeight:"100%"}}>
             <div style={{position:"absolute",inset:0,pointerEvents:"none",
-              backgroundImage:`repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px ${pxPerBar}px)`}}/>
+              backgroundImage:`repeating-linear-gradient(90deg,var(--line-soft) 0 1px,transparent 1px ${pxPerBar}px)`}}/>
             <div style={{position:"absolute",inset:0,pointerEvents:"none",opacity:.6,
               backgroundImage:`repeating-linear-gradient(90deg,var(--line-2) 0 1px,transparent 1px ${pxPerBar*4}px)`}}/>
             {p.loop.on && <div style={{position:"absolute",top:0,bottom:0,left:p.loop.start*pxPerBar,
@@ -257,7 +257,7 @@ function Arrangement(p) {
                     <div key={clip.id} onPointerDown={(e)=>dragClip(e,ti,clip)}
                       onContextMenu={(e)=>clipMenu(e,t,clip)}
                       onDoubleClick={()=>{ p.selectClip(t.id,clip.id); if(clip.audio===undefined && t.kind!=="audio" && t.kind!=="drum") p.openPiano(); }}
-                      className={`clip-el ${isAudio?"audio-clip-el":"midi-clip-el"} ${sel?"selected":""}`}
+                      className={`clip-el ${isAudio?"audio-clip-el":t.kind==="drum"?"drum-clip-el":"midi-clip-el"} ${sel?"selected":""}`}
                       style={{position:"absolute",top:5,height:HH-12,left:clip.start*pxPerBar,width:clip.len*pxPerBar-2,
                         "--clip-color":cc,borderRadius:7,overflow:"hidden",cursor:"grab",
                         background:isAudio
@@ -287,7 +287,7 @@ function Arrangement(p) {
                 })}
               </div>
             ))}
-            <div style={{position:"absolute",top:0,bottom:0,left:position/beatsPerBar*pxPerBar,width:1.5,
+            <div className="timeline-playhead" style={{position:"absolute",top:0,bottom:0,left:position/beatsPerBar*pxPerBar,width:1.5,
               background:"var(--cyan)",boxShadow:"0 0 8px var(--cyan)",pointerEvents:"none",zIndex:5}}/>
           </div>
         </div>
@@ -321,7 +321,7 @@ function TrackHead(p) {
     <div onPointerDown={(e)=>{ if(e.button===0) p.selectTrack(t.id); }} onContextMenu={menu}
       style={{height:HH,borderBottom:"1px solid var(--line)",display:"flex",alignItems:"stretch",
         background: sel?"color-mix(in srgb,var(--cyan) 7%,var(--bg-3))":"transparent",
-        opacity:dimmed?.5:1,transition:"opacity .15s, background .15s",cursor:"pointer",position:"relative"}}>
+        opacity:dimmed ? .5 : 1,transition:"opacity .15s, background .15s",cursor:"pointer",position:"relative"}}>
       <div style={{width:4,background:t.color,boxShadow:`0 0 8px ${t.color}`}}/>
       <div style={{flex:1,padding:"8px 8px 8px 10px",display:"flex",flexDirection:"column",justifyContent:"space-between",minWidth:0}}>
         <div style={{display:"flex",alignItems:"center",gap:7}}>

@@ -82,11 +82,11 @@ function ChannelStrip({ t, level, master, onVol, onPan, onMute, onSolo, sel, onS
     ...EFFECT_LIBRARY.map(f=>({ label:f.name, icon:"fx", shortcut:f.category, onClick:()=>onAddFx&&onAddFx(t.id,f.id) })),
   ]);
   return (
-    <div onPointerDown={()=>!master&&onSelect(t.id)} className="no-sel"
+    <div onPointerDown={()=>!master&&onSelect(t.id)} className="no-sel mixer-strip"
       style={{width:master?112:132,flex:"0 0 auto",display:"flex",flexDirection:"column",
         background: master?"linear-gradient(var(--bg-3),var(--bg-2))":(sel?"color-mix(in srgb,var(--cyan) 6%,var(--bg-2))":"var(--bg-2)"),
-        borderRight:"1px solid var(--line)",opacity:dimmed?.45:1,transition:"opacity .15s,background .15s",
-        borderTop:`2px solid ${master?"var(--cyan)":t.color}`}}>
+        borderRight:"1px solid var(--line)",opacity:dimmed ? .45 : 1,transition:"opacity .15s,background .15s,filter .15s",
+        borderTop:`2px solid ${master?"var(--cyan)":t.color}`,boxShadow:sel&&!master?`inset 0 0 0 1px color-mix(in srgb,${cc} 38%,transparent)`:"none"}}>
       {/* name */}
       <div style={{padding:"7px 8px",borderBottom:"1px solid var(--line)",display:"flex",alignItems:"center",gap:6}}>
         {!master && <span style={{width:8,height:8,borderRadius:2,background:cc,boxShadow:`0 0 6px ${cc}`,flex:"0 0 auto"}}/>}
@@ -97,7 +97,7 @@ function ChannelStrip({ t, level, master, onVol, onPan, onMute, onSolo, sel, onS
       <div style={{padding:"7px 7px",display:"flex",flexDirection:"column",gap:4,borderBottom:"1px solid var(--line)"}}>
         {fx.map((f,i)=>(
           <div key={f.id||i}>
-          <div onClick={()=>!master&&setOpenFx(openFx===f.id?null:f.id)} onContextMenu={(e)=>!master&&openMenu(e,[
+          <div className="hardware-control" onClick={()=>!master&&setOpenFx(openFx===f.id?null:f.id)} onContextMenu={(e)=>!master&&openMenu(e,[
               { header:f.name },
               { label:f.enabled===false?"Enable":"Disable", checked:f.enabled!==false, onClick:()=>onToggleFx&&onToggleFx(t.id,f.id) },
               { label:"Remove Effect", icon:"trash", danger:true, onClick:()=>onRemoveFx&&onRemoveFx(t.id,f.id) },
@@ -152,7 +152,7 @@ function Mixer(p) {
     <div className="no-sel" style={{height:p.height,display:"flex",flexDirection:"column",background:"var(--bg-1)",overflow:"hidden"}}>
       <div onContextMenu={(e)=>{e.preventDefault();p.onClose&&p.onClose();}}
         style={{height:42,flex:"0 0 auto",display:"flex",alignItems:"center",gap:10,padding:"0 12px",
-        borderBottom:"1px solid var(--line)",background:"var(--bg-3)"}}>
+        borderBottom:"1px solid var(--line)",background:"var(--metal), var(--bg-3)",boxShadow:"0 1px 0 rgba(255,255,255,.05) inset"}}>
         {React.cloneElement(I.mixer,{style:{width:15,height:15,color:"var(--cyan)"}})}
         <span style={{fontWeight:600,fontSize:12.5}}>Mixer</span>
         <span className="faint" style={{fontSize:11}}>· {p.tracks.length} channels</span>

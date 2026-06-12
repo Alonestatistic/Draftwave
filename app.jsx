@@ -866,7 +866,7 @@ function App(){
     onDropError:(error)=>noteError("Drop failed", error) };
 
   return (
-    <div className="scan" style={{height:"100vh",display:"flex",flexDirection:"column",position:"relative"}}>
+    <div className="scan app-shell" style={{height:"100vh",display:"flex",flexDirection:"column",position:"relative"}}>
       <Transport {...{bpm,setBpm:setBpmProject,playing,recording,position,sig,loop,metro,snap,scale,cpu,uiScale,setUiScale,
         wheelZoom:settings.editing.wheelZoom,verticalWheelScroll:settings.editing.verticalWheelScroll,
         projectNotice,nativeMode:!!window.dawNative,

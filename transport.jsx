@@ -63,10 +63,10 @@ function BpmControl({ value, onChange }) {
 function TransportButton({icon,on,onClick,color="var(--cyan)",glow,title}) {
   return (
     <button title={title} onClick={onClick} className="no-sel"
-      style={{width:38,height:38,borderRadius:"var(--r-2)",display:"grid",placeItems:"center",transition:"all .14s",
+      style={{width:40,height:40,borderRadius:"var(--r-2)",display:"grid",placeItems:"center",transition:"all .14s",
         color: on?(color):"var(--tx-2)", background:on?`color-mix(in srgb,${color} 16%,transparent)`:"var(--bg-3)",
         border:`1px solid ${on?color:"var(--line)"}`,
-        boxShadow: on&&glow?`0 0 16px ${color}55`:"var(--sh-1)"}}>
+        boxShadow: on&&glow?`0 0 0 1px ${color}33,0 0 16px ${color}55,var(--sh-control)`:"var(--sh-control)"}}>
       {React.cloneElement(I[icon],{style:{width:18,height:18}})}
     </button>
   );
@@ -76,9 +76,9 @@ function ToolButton({icon,label,onClick,title,disabled,active,color="var(--cyan)
   return (
     <button title={title||label} onPointerDown={e=>e.stopPropagation()} onClick={onClick} disabled={disabled} className="no-sel"
       style={{height:30,minWidth:30,padding:"0 8px",borderRadius:"var(--r-2)",display:"inline-flex",alignItems:"center",gap:6,
-        color:disabled?"var(--tx-4)":active?"#04121a":"var(--tx-2)",background:active?color:"var(--bg-3)",
+        color:disabled?"var(--tx-4)":active?"#04121a":"var(--tx-2)",background:active?color:"var(--metal), var(--bg-3)",
         border:`1px solid ${active?color:"var(--line)"}`,
-        fontSize:11,fontWeight:700,boxShadow:"var(--sh-1)",position:"relative",zIndex:3,pointerEvents:"auto"}}>
+        fontSize:11,fontWeight:750,boxShadow:active?`0 0 14px color-mix(in srgb,${color} 24%,transparent),var(--sh-control)`:"var(--sh-control)",position:"relative",zIndex:3,pointerEvents:"auto"}}>
       {React.cloneElement(I[icon]||I.spark,{style:{width:14,height:14}})}
       {label && <span style={{whiteSpace:"nowrap"}}>{label}</span>}
     </button>
@@ -96,8 +96,8 @@ function Transport(p) {
   const ms = String(Math.floor((secs%1)*100)).padStart(2,"0");
 
   return (
-    <header className="no-sel" style={{height:"var(--transport-h)",flex:"0 0 auto",display:"flex",alignItems:"flex-start",
-      gap:14,padding:"8px 14px 0",background:"linear-gradient(var(--bg-3),var(--bg-2))",borderBottom:"1px solid var(--line-2)",
+    <header className="no-sel transport-shell" style={{height:"var(--transport-h)",flex:"0 0 auto",display:"flex",alignItems:"flex-start",
+      gap:14,padding:"8px 14px 0",borderBottom:"1px solid var(--line-2)",
       position:"relative",zIndex:20}}>
 
       {/* logo + app menu */}
@@ -120,8 +120,7 @@ function Transport(p) {
       </div>
 
       {/* readouts */}
-      <div style={{display:"flex",alignItems:"center",gap:14,padding:"5px 14px",borderRadius:"var(--r-2)",
-        background:"var(--bg-1)",border:"1px solid var(--line)",boxShadow:"inset 0 1px 6px rgba(0,0,0,.5)"}}>
+      <div className="transport-readout" style={{display:"flex",alignItems:"center",gap:14,padding:"5px 14px",borderRadius:"var(--r-2)"}}>
         <div style={{display:"flex",flexDirection:"column",lineHeight:1}}>
           <span className="mono glow-text" style={{fontSize:20,fontWeight:600,color:"var(--cyan)"}}>
             {String(bar).padStart(2,"0")}<span style={{color:"var(--tx-3)"}}>.</span>{beat}<span style={{color:"var(--tx-3)"}}>.</span>{tick}
@@ -149,7 +148,7 @@ function Transport(p) {
       <div style={{flex:1}}/>
 
       {/* desktop / project status */}
-      <div title={p.projectNotice||"Ready"} style={{display:"flex",alignItems:"center",gap:7,maxWidth:260,minWidth:130,
+      <div className="hardware-control" title={p.projectNotice||"Ready"} style={{display:"flex",alignItems:"center",gap:7,maxWidth:260,minWidth:130,
         padding:"6px 10px",borderRadius:"var(--r-pill)",background:"var(--bg-1)",border:"1px solid var(--line)",
         boxShadow:"inset 0 1px 5px rgba(0,0,0,.35)"}}>
         <span style={{width:7,height:7,borderRadius:99,background:p.recording?"var(--red)":p.playing?"var(--emerald)":"var(--cyan)",
@@ -185,7 +184,7 @@ function Transport(p) {
         </button>
       </div>
 
-      <div style={{position:"absolute",left:14,right:14,bottom:7,height:30,display:"flex",gap:6,alignItems:"center",
+      <div className="toolbar-rail" style={{position:"absolute",left:14,right:14,bottom:7,height:30,display:"flex",gap:6,alignItems:"center",
         borderTop:"1px solid var(--line)",paddingTop:6}}>
         <span className="faint" style={{fontSize:9,fontWeight:800,letterSpacing:".12em",marginRight:2}}>TOOLS</span>
         <ToolButton icon="pointer" label="Select" onClick={p.onSelectTool}/>

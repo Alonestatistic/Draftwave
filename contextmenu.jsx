@@ -55,7 +55,7 @@ function ContextMenuHost(){
     <div style={{position:"fixed",inset:0,zIndex:3000}}
       onPointerDown={()=>setMenu(null)}
       onContextMenu={(e)=>{e.preventDefault();setMenu(null);}}>
-      <div onPointerDown={e=>e.stopPropagation()} className="no-sel ctx-pop"
+      <div onPointerDown={e=>e.stopPropagation()} className="no-sel ctx-pop hardware-panel"
         style={{position:"absolute",left:x,top:y,width:W,padding:6,background:"var(--bg-3)",
           border:"1px solid var(--line-3)",borderRadius:"var(--r-2)",boxShadow:"var(--sh-pop)"}}>
         {menu.items.map((it,i)=> it.sep
